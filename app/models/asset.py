@@ -1,8 +1,9 @@
 from sqlalchemy import Column, Integer, String, BigInteger, DateTime, ForeignKey
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship , DeclarativeBase
 from sqlalchemy.sql import func
 from app.db.base import Base, AssetType
-from sqlalchemy.dialects.postgresql import ENUM
+from sqlalchemy.dialects.postgresql import ENUM 
+import datetime
 
 class Asset(Base):
     __tablename__ = 'assets'
