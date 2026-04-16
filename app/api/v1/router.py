@@ -16,3 +16,4 @@ api_router.include_router(users.router)
 api_router.include_router(teams.router)
 api_router.include_router(brands.router)
 api_router.include_router(strategies.router)
+
