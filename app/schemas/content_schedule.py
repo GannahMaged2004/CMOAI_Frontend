@@ -25,3 +25,13 @@ class CalendarView(ScheduleBase):
     items: List[CalendarViewItem] = []
 
     model_config = ConfigDict(from_attributes=True)
+
+class ScheduleUpdate(BaseModel):
+    plan_type: Optional[PlanType] = None
+    start_date: Optional[date] = None
+    end_date: Optional[date] = None
+
+class ScheduleOut(ScheduleBase):
+    id: int
+    created_at: datetime
+    model_config = ConfigDict(from_attributes=True)

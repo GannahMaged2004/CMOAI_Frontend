@@ -7,7 +7,7 @@ Import this object in app/main.py and mount it with:
 
 from fastapi import APIRouter
 
-from app.api.v1 import auth, brands, strategies, teams, users
+from app.api.v1 import auth, brands, strategies, teams, users , content_calendar
 
 api_router = APIRouter()
 
@@ -16,4 +16,5 @@ api_router.include_router(users.router)
 api_router.include_router(teams.router)
 api_router.include_router(brands.router)
 api_router.include_router(strategies.router)
+api_router.include_router(content_calendar.router)
 

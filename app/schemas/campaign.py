@@ -23,3 +23,18 @@ class CampaignOut(CampaignBase):
     updated_at: Optional[datetime] = None
 
     model_config = ConfigDict(from_attributes=True)
+
+class CampaignUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    start_date: Optional[datetime] = None
+    status: Optional[CampaignStatus] = None
+
+class CampaignStatusUpdate(BaseModel):
+    status: CampaignStatus
+
+class CampaignPerformance(BaseModel):
+    total_reach: int = 0
+    total_clicks: int = 0
+    total_conversions: int = 0
+    avg_engagement_rate: float = 0.0
