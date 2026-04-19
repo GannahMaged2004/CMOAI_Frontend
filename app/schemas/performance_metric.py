@@ -24,4 +24,17 @@ class AnalyticsOverview(BaseModel):
     total_clicks: int
     total_conversions: int
     total_reach: int
-    average_ctr: float
+    avg_engagement_rate: float
+
+
+class ChannelBreakdown(BaseModel):
+    platform: str
+    total_reach: int
+    total_engagement: int
+    total_clicks: int
+
+
+class TimeSeriesPoint(BaseModel):
+    date: str
+    reach: int
+    engagement: int

@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Numeric, Boolean, DateTime, ForeignKey
+from sqlalchemy import Column, Integer, String, Numeric, Boolean, DateTime, ForeignKey, UniqueConstraint
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.db.base import Base, PlanName
@@ -29,3 +29,20 @@ class Subscription(Base):
 
     user = relationship('User')
     plan = relationship('Plan')
+
+
+class UsageRecord(Base):
+    __tablename__ = 'usage_records'
+    __table_args__ = (
+        UniqueConstraint('user_id', 'period_month', 'period_year', name='uq_usage_user_period'),
+    )
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'), nullable=False, index=True)
+    ai_generations_used = Column(Integer, nullable=False, default=0)
+    active_campaigns_count = Column(Integer, nullable=False, default=0)
+    storage_used_gb = Column(Numeric(10, 2), nullable=False, default=0)
+    period_month = Column(Integer, nullable=False, index=True)
+    period_year = Column(Integer, nullable=False, index=True)
+
+    user = relationship('User')

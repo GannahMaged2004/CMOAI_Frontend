@@ -5,11 +5,13 @@ FastAPI dependency callables shared across routes.
 from fastapi import Depends
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError
+from sqlalchemy import select
 from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import credentials_exception
 from app.core.security import decode_access_token
-from app.db.session import SessionLocal
+from app.db.session import AsyncSessionLocal, SessionLocal
 from app.models.user import User
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
@@ -24,6 +26,12 @@ def get_db():
         yield db
     finally:
         db.close()
+
+
+async def get_async_db():
+    """Yield an async SQLAlchemy session for routes that use async services."""
+    async with AsyncSessionLocal() as session:
+        yield session
 
 
 # ── Current user extraction ──────────────────────────────────
@@ -45,6 +53,26 @@ def get_current_user(
         raise credentials_exception
 
     user = db.query(User).filter(User.email == email).first()
+    if user is None:
+        raise credentials_exception
+    return user
+
+
+async def get_current_user_async(
+    token: str = Depends(oauth2_scheme),
+    db: AsyncSession = Depends(get_async_db),
+) -> User:
+    """Async variant of ``get_current_user`` for async database sessions."""
+    try:
+        payload = decode_access_token(token)
+        email: str | None = payload.get("sub")
+        if email is None:
+            raise credentials_exception
+    except JWTError:
+        raise credentials_exception
+
+    result = await db.execute(select(User).where(User.email == email))
+    user = result.scalar_one_or_none()
     if user is None:
         raise credentials_exception
     return user

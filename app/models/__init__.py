@@ -9,4 +9,4 @@ from app.models.performance_metric import PerformanceMetric
 from app.models.campaign import Campaign, CampaignMember
 from app.models.asset import Asset
 from app.models.notification import Notification
-from app.models.billing import Plan, Subscription
+from app.models.billing import Plan, Subscription, UsageRecord
