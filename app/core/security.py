@@ -4,6 +4,8 @@ Password hashing (bcrypt) and JWT token utilities.
 
 from datetime import datetime, timedelta, timezone
 
+import hashlib
+
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 
@@ -13,15 +15,33 @@ from app.core.config import settings
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
+BCRYPT_MAX_PASSWORD_BYTES = 72
+
+
+def _normalize_bcrypt_password(plain_password: str) -> str:
+    """Normalize passwords for bcrypt.
+
+    bcrypt only uses the first 72 bytes of the input. To safely support longer
+    passwords without silent truncation, we pre-hash any password whose UTF-8
+    byte length exceeds 72 bytes.
+    """
+    pw_bytes = plain_password.encode("utf-8")
+    if len(pw_bytes) <= BCRYPT_MAX_PASSWORD_BYTES:
+        return plain_password
+
+    digest_hex = hashlib.sha256(pw_bytes).hexdigest()
+    # 7 + 64 = 71 chars, always within bcrypt's 72 byte limit (ASCII).
+    return f"sha256${digest_hex}"
+
 
 def hash_password(plain_password: str) -> str:
     """Return a bcrypt hash of *plain_password*."""
-    return pwd_context.hash(plain_password)
+    return pwd_context.hash(_normalize_bcrypt_password(plain_password))
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """Return ``True`` if *plain_password* matches *hashed_password*."""
-    return pwd_context.verify(plain_password, hashed_password)
+    return pwd_context.verify(_normalize_bcrypt_password(plain_password), hashed_password)
 
 
 # ── JWT tokens ────────────────────────────────────────────────

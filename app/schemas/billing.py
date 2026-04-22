@@ -4,6 +4,7 @@ from datetime import datetime
 from typing import Optional
 from app.db.base import PlanName
 
+
 class PlanOut(BaseModel):
     id: int
     name: PlanName
@@ -18,6 +19,20 @@ class PlanOut(BaseModel):
 class SubscribeRequest(BaseModel):
     plan_id: int
     payment_method_id: str
+
+
+class SubscriptionOut(BaseModel):
+    id: int
+    user_id: int
+    plan_id: int
+    is_active: bool
+    stripe_subscription_id: Optional[str] = None
+    current_period_start: Optional[datetime] = None
+    current_period_end: Optional[datetime] = None
+    created_at: datetime
+    plan: Optional[PlanOut] = None
+
+    model_config = ConfigDict(from_attributes=True)
 
 class UsageOut(BaseModel):
     ai_generations_used: int

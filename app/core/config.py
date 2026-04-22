@@ -28,5 +28,25 @@ class Settings(BaseSettings):
     # ── Stripe (future) ──────────────────────────────────────
     STRIPE_SECRET_KEY: str = ""
 
+    # ── Cloudinary (Asset storage) ───────────────────────────
+    CLOUDINARY_CLOUD_NAME: str = ""
+    CLOUDINARY_API_KEY: str = ""
+    CLOUDINARY_API_SECRET: str = ""
+
+    # ── SMTP (Emails) ────────────────────────────────────────
+    SMTP_HOST: str = ""
+    SMTP_PORT: int = 587
+    SMTP_USERNAME: str = ""
+    SMTP_PASSWORD: str = ""
+    EMAILS_FROM_EMAIL: str = "noreply@cmo-ai.com"
+
+    # ── OpenAI (Quick Actions) ───────────────────────────────
+    OPENAI_API_KEY: str = ""
+
+    # ── Groq (LLM) ───────────────────────────────────────────
+    GROQ_API_KEY: str = ""
+    GROQ_MODEL: str = "llama-3.3-70b-versatile"
+    LLM_PROVIDER: str = "groq"  # "groq" or "openai"
+
 
 settings = Settings()

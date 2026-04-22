@@ -7,6 +7,7 @@ class AssetBase(BaseModel):
     name: str
     asset_type: AssetType
     url: str
+    public_id: Optional[str] = None
     file_size: Optional[int] = None
     mime_type: Optional[str] = None
     campaign_id: Optional[int] = None
