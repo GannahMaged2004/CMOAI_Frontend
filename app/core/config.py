@@ -19,12 +19,6 @@ class Settings(BaseSettings):
     SECRET_KEY: str
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
-
-    # ── AWS S3 (future) ──────────────────────────────────────
-    AWS_ACCESS_KEY_ID: str = ""
-    AWS_SECRET_ACCESS_KEY: str = ""
-    S3_BUCKET_NAME: str = ""
-
     # ── Stripe (future) ──────────────────────────────────────
     STRIPE_SECRET_KEY: str = ""
 
@@ -39,9 +33,6 @@ class Settings(BaseSettings):
     SMTP_USERNAME: str = ""
     SMTP_PASSWORD: str = ""
     EMAILS_FROM_EMAIL: str = "noreply@cmo-ai.com"
-
-    # ── OpenAI (Quick Actions) ───────────────────────────────
-    OPENAI_API_KEY: str = ""
 
     # ── Groq (LLM) ───────────────────────────────────────────
     GROQ_API_KEY: str = ""
