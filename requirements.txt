@@ -19,6 +19,7 @@ pydantic-settings==2.2.1
 pydantic[email]==2.7.1
 
 # File storage (Asset Library)
+aiofiles==25.1.0
 boto3==1.34.110
 cloudinary==1.40.0
 

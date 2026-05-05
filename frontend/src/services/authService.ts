@@ -31,8 +31,9 @@ export const logout = async (): Promise<MessageResponse> => {
 };
 
 export const refreshToken = async (refresh_token: string): Promise<TokenResponse> => {
-  return request<TokenResponse>(`/auth/refresh-token?refresh_token=${encodeURIComponent(refresh_token)}`, {
+  return request<TokenResponse>('/auth/refresh-token', {
     method: 'POST',
+    body: JSON.stringify({ refresh_token }),
     requireAuth: false,
   });
 };
@@ -41,6 +42,14 @@ export const forgotPassword = async (email: string): Promise<MessageResponse> =>
   return request<MessageResponse>('/auth/forgot-password', {
     method: 'POST',
     body: JSON.stringify({ email }),
+    requireAuth: false,
+  });
+};
+
+export const resetPassword = async (token: string, new_password: string): Promise<MessageResponse> => {
+  return request<MessageResponse>('/auth/reset-password', {
+    method: 'POST',
+    body: JSON.stringify({ token, new_password }),
     requireAuth: false,
   });
 };

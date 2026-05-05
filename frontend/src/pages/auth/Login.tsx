@@ -5,6 +5,7 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import AuthLayout from "./AuthLayout";
 import { useAuth } from "../../contexts/AuthContext";
+import { ROUTES } from "../../constants/routes";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -36,11 +37,10 @@ export default function Login() {
 
       await login(email, password);
 
-      navigate("/dashboard");
+      navigate(ROUTES.DASHBOARD);
 
-    } catch (err: any) {
-      console.log(err);
-      setError(err.response?.data?.detail || "Login failed");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Login failed");
     } finally {
       setLoading(false);
     }
@@ -101,14 +101,14 @@ export default function Login() {
           )}
         </Button>
         <p className="text-sm text-center">
-          <Link to="/forgot" className="text-neonBlue">
+          <Link to={ROUTES.FORGOT_PASSWORD} className="text-neonBlue">
             Forgot password?
           </Link>
         </p>
 
         <p className="text-sm text-center">
           Don’t have an account?
-          <Link to="/register" className="ml-1 text-neonBlue">
+          <Link to={ROUTES.SIGNUP} className="ml-1 text-neonBlue">
             Sign up
           </Link>
         </p>

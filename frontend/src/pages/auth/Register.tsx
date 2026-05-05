@@ -5,6 +5,7 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import AuthLayout from "./AuthLayout";
 import { useAuth } from "../../contexts/AuthContext";
+import { ROUTES } from "../../constants/routes";
 
 export default function Register() {
   const navigate = useNavigate();
@@ -19,7 +20,6 @@ export default function Register() {
   const [error, setError] = useState("");
 
   const handleRegister = async () => {
-    console.log("Registering with:", { name, email, password });
     setError("");
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -41,12 +41,11 @@ export default function Register() {
 
     try {
       setLoading(true);
-      console.log("Registering with:", { name, email, password });
 
       await register(name, email, password);
-      navigate("/dashboard");
-    } catch (err: any) {
-      setError(err.response?.data?.detail || "Signup failed");
+      navigate(ROUTES.DASHBOARD);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Signup failed");
     } finally {
       setLoading(false);
     }
@@ -58,6 +57,7 @@ export default function Register() {
         <div className="relative">
           <User className="absolute w-4 h-4 text-[#e1e6a1] left-3 top-3" />
           <Input
+            value={name}
             className="pl-10"
             placeholder="Full Name"
             onChange={(e) => setName(e.target.value)}
@@ -67,6 +67,7 @@ export default function Register() {
         <div className="relative">
           <Mail className="absolute w-4 h-4 text-neonBlue left-3 top-3" />
           <Input
+            value={email}
             className="pl-10"
             placeholder="Email"
             onChange={(e) => setEmail(e.target.value)}
@@ -110,7 +111,7 @@ export default function Register() {
 
         <p className="text-sm text-center">
           Already have an account?
-          <Link to="/login" className="ml-1 font-bold text-neonBlue">
+          <Link to={ROUTES.LOGIN} className="ml-1 font-bold text-neonBlue">
             Login
           </Link>
         </p>

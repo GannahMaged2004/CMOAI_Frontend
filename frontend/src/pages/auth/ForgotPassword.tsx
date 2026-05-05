@@ -3,7 +3,7 @@ import { Button } from "../../components/ui/button";
 import { Mail, Loader2 } from "lucide-react";
 import { useState } from "react";
 import AuthLayout from "./AuthLayout";
-import {forgotPassword } from "../../services/auth";
+import { forgotPassword } from "../../services/authService";
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState("");

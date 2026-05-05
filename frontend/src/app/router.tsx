@@ -11,7 +11,7 @@ import Register from "../pages/auth/Register";
 import ForgotPassword from "../pages/auth/ForgotPassword";
 // import ResetPassword from "../pages/auth/ResetPassword";
 import { AuthProvider } from "../contexts/AuthContext";
-import { ProtectedRoute } from "../components/ProtectedRoute";
+import { ProtectedRoute } from "../components/protectedRoute";
 
 export default function Router() {
   return (
@@ -21,7 +21,9 @@ export default function Router() {
         <Route path="/landing" element={<Landing />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/signup" element={<Register />} />
         <Route path="/forgot" element={<ForgotPassword />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
         {/* <Route path="/reset/:token" element={<ResetPassword />} /> */}
         <Route path="/pricing" element={<Pricing />} />
         <Route path="/features/:id" element={<FeatureDetails />} />
