@@ -16,6 +16,11 @@ interface RequestOptions extends RequestInit {
   requireAuth?: boolean;
 }
 
+type ApiErrorBody = {
+  detail?: unknown;
+  message?: unknown;
+};
+
 export async function request<T>(endpoint: string, options: RequestOptions = {}): Promise<T> {
   const { headers, requireAuth = true, ...customConfig } = options;
 
@@ -36,8 +41,12 @@ export async function request<T>(endpoint: string, options: RequestOptions = {})
     const refreshToken = getRefreshToken();
     if (refreshToken) {
       try {
-        const refreshResponse = await fetch(`${BASE_URL}/auth/refresh-token?refresh_token=${encodeURIComponent(refreshToken)}`, {
+        const refreshResponse = await fetch(`${BASE_URL}/auth/refresh-token`, {
           method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ refresh_token: refreshToken }),
         });
 
         if (refreshResponse.ok) {
@@ -68,35 +77,48 @@ export async function request<T>(endpoint: string, options: RequestOptions = {})
     }
   }
 
-  let data;
+  let data: unknown;
   const isJson = response.headers.get('content-type')?.includes('application/json');
   if (isJson) {
       try {
         data = await response.json();
-      } catch (e) {
+      } catch {
         data = null;
       }
   }
 
   if (!response.ok) {
     let errorMessage = 'Something went wrong, try again';
+    const errorData = data as ApiErrorBody | null;
     
     if (response.status === 403) {
       errorMessage = "You don't have permission";
     } else if (response.status === 404) {
       errorMessage = "Not found";
     } else if (response.status === 422) {
-       if (data?.detail && Array.isArray(data.detail)) {
-         errorMessage = data.detail.map((err: any) => err.msg).join(', ');
-       } else if (data?.detail) {
-         errorMessage = data.detail;
+       if (Array.isArray(errorData?.detail)) {
+         errorMessage = errorData.detail
+           .map((err) =>
+             typeof err === 'object' &&
+             err !== null &&
+             'msg' in err &&
+             typeof err.msg === 'string'
+               ? err.msg
+               : 'Validation error'
+           )
+           .join(', ');
+       } else if (typeof errorData?.detail === 'string') {
+         errorMessage = errorData.detail;
        } else {
          errorMessage = "Validation error";
        }
     } else if (response.status === 500) {
       errorMessage = "Something went wrong, try again";
     } else {
-      errorMessage = data?.detail || data?.message || errorMessage;
+      errorMessage =
+        (typeof errorData?.detail === 'string' && errorData.detail) ||
+        (typeof errorData?.message === 'string' && errorData.message) ||
+        errorMessage;
     }
     
     throw new Error(errorMessage);

@@ -1,16 +1,17 @@
 import { Button } from "../components/ui/button";
 import { Link, useNavigate } from "react-router-dom";
 import { Menu, Smile } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { ROUTES } from "../constants/routes";
 import logo from "@/assets/cmo-logo.png";
 import logobg from "@/assets/logobg.jpg";
 import { useLocation } from "react-router-dom";
+import { useAuth } from "../contexts/AuthContext";
 
 export default function Navigation() {
   const location = useLocation();
   const [open, setOpen] = useState(false);
-  const [user, setUser] = useState<any>(null);
+  const { logout, user } = useAuth();
 
   const navigate = useNavigate();
 
@@ -23,20 +24,8 @@ export default function Navigation() {
     }
   };
 
-  useEffect(() => {
-    const stored = localStorage.getItem("cmo-user");
-
-    if (stored) {
-      setUser(JSON.parse(stored));
-    }
-  }, []);
-
-  const handleLogout = () => {
-    localStorage.removeItem("cmo-user");
-
-    setUser(null);
-
-    navigate("/");
+  const handleLogout = async () => {
+    await logout();
   };
 
   return (
@@ -76,7 +65,7 @@ export default function Navigation() {
                 </button>
               </div>
             ) : (
-              <Link className="transition hover:text-neonBlue" to="/login">
+              <Link className="transition hover:text-neonBlue" to={ROUTES.LOGIN}>
                 Log in
               </Link>
             )}
@@ -128,16 +117,18 @@ export default function Navigation() {
             ) : (
               <Link
                 className="block transition hover:text-neonBlue"
-                to="/login"
+                to={ROUTES.LOGIN}
                 onClick={() => setOpen(false)}
               >
                 Log in
               </Link>
             )}
 
-            <Button className="w-full mt-3 transition bg-gradient-to-r from-electricPurple to-neonPink hover:scale-105">
-              Get Started
-            </Button>
+            <Link to={user ? ROUTES.DASHBOARD : ROUTES.SIGNUP}>
+              <Button className="w-full mt-3 transition bg-gradient-to-r from-electricPurple to-neonPink hover:scale-105">
+                Get Started
+              </Button>
+            </Link>
           </div>
         )}
       </div>

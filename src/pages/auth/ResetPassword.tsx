@@ -4,7 +4,7 @@ import { Lock, Loader2 } from "lucide-react";
 import { useState } from "react";
 import { useParams } from "react-router-dom";
 import AuthLayout from "./AuthLayout";
-import { resetPassword } from "../../services/auth";
+import { resetPassword } from "../../services/authService";
 
 export default function ResetPassword() {
   const { token } = useParams();

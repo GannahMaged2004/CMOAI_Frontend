@@ -1,7 +1,7 @@
 import { request } from '../lib/api';
 import type { StrategyOut, MessageResponse } from '../types/api';
 
-export const createStrategy = async (data: Record<string, any>): Promise<StrategyOut> => {
+export const createStrategy = async (data: Record<string, unknown>): Promise<StrategyOut> => {
   return request<StrategyOut>('/strategies', {
     method: 'POST',
     body: JSON.stringify(data),
@@ -20,7 +20,7 @@ export const getStrategy = async (id: number): Promise<StrategyOut> => {
   });
 };
 
-export const updateStrategy = async (id: number, data: Record<string, any>): Promise<StrategyOut> => {
+export const updateStrategy = async (id: number, data: Record<string, unknown>): Promise<StrategyOut> => {
   return request<StrategyOut>(`/strategies/${id}`, {
     method: 'PUT',
     body: JSON.stringify(data),
