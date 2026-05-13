@@ -1,4 +1,5 @@
 import { Routes, Route } from "react-router-dom";
+import { Toaster } from "sonner";
 
 import Welcome from "../pages/Welcome";
 import Landing from "../pages/Landing";
@@ -12,10 +13,12 @@ import ForgotPassword from "../pages/auth/ForgotPassword";
 // import ResetPassword from "../pages/auth/ResetPassword";
 import { AuthProvider } from "../contexts/AuthContext";
 import { ProtectedRoute } from "../components/protectedRoute";
+import { CampaignProvider } from "../hooks/useCampaign";
 
 export default function Router() {
   return (
     <AuthProvider>
+      <Toaster richColors position="top-center" />
       <Routes>
         <Route path="/" element={<Welcome />} />
         <Route path="/landing" element={<Landing />} />
@@ -33,7 +36,9 @@ export default function Router() {
           path="/dashboard"
           element={
             <ProtectedRoute>
-              <Dashboard />
+              <CampaignProvider>
+                <Dashboard />
+              </CampaignProvider>
             </ProtectedRoute>
           }
         />

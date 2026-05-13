@@ -35,7 +35,17 @@ export async function request<T>(endpoint: string, options: RequestOptions = {})
     headers: requestHeaders,
   };
 
-  let response = await fetch(`${BASE_URL}${endpoint}`, config);
+  let response: Response;
+  try {
+    response = await fetch(`${BASE_URL}${endpoint}`, config);
+  } catch (err) {
+    if (err instanceof TypeError) {
+      throw new Error(
+        'Cannot connect to server. Is the backend running?'
+      );
+    }
+    throw err;
+  }
 
   if (response.status === 401 && requireAuth) {
     const refreshToken = getRefreshToken();
@@ -59,7 +69,16 @@ export async function request<T>(endpoint: string, options: RequestOptions = {})
           };
           
           config.headers = requestHeaders;
-          response = await fetch(`${BASE_URL}${endpoint}`, config);
+          try {
+            response = await fetch(`${BASE_URL}${endpoint}`, config);
+          } catch (err) {
+            if (err instanceof TypeError) {
+              throw new Error(
+                'Cannot connect to server. Is the backend running?'
+              );
+            }
+            throw err;
+          }
         } else {
           clearTokens();
           window.location.href = '/login';
@@ -88,7 +107,7 @@ export async function request<T>(endpoint: string, options: RequestOptions = {})
   }
 
   if (!response.ok) {
-    let errorMessage = 'Something went wrong, try again';
+    let errorMessage = 'Something went wrong';
     const errorData = data as ApiErrorBody | null;
     
     if (response.status === 403) {
@@ -113,7 +132,7 @@ export async function request<T>(endpoint: string, options: RequestOptions = {})
          errorMessage = "Validation error";
        }
     } else if (response.status === 500) {
-      errorMessage = "Something went wrong, try again";
+      errorMessage = 'Something went wrong';
     } else {
       errorMessage =
         (typeof errorData?.detail === 'string' && errorData.detail) ||
