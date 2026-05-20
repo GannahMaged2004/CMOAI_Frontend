@@ -158,3 +158,47 @@ export interface GenerateImageRequest {
   prompt: string;
   brand_id: number;
 }
+
+export type ContentAgentType =
+  | "social_media_post"
+  | "email_campaign"
+  | "promotional_message";
+
+export type ContentAgentPlatform =
+  | "instagram"
+  | "twitter"
+  | "linkedin"
+  | "facebook"
+  | "email";
+
+export interface TextAgentRequest {
+  message: string;
+  campaign_id: number;
+  content_type: ContentAgentType;
+  platform?: ContentAgentPlatform | null;
+}
+
+export interface ContentVariationOut {
+  variation_id: number;
+  content: string;
+  platform_note: string;
+}
+
+export interface SEODataOut {
+  keywords: string[];
+  meta_description: string;
+  suggested_title: string;
+}
+
+export interface TextAgentResponse {
+  content_type: string;
+  platform: string | null;
+  generated_content: string;
+  variations?: ContentVariationOut[] | null;
+  hashtags?: string[] | null;
+  subject_line?: string | null;
+  seo?: SEODataOut | null;
+  platform_rules?: Record<string, unknown> | null;
+  char_count?: number | null;
+  within_limit?: boolean | null;
+}

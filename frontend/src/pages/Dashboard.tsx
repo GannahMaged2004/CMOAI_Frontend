@@ -26,6 +26,7 @@ import { useCampaign } from "../hooks/useCampaign";
 import { getAnalyticsChannels, getAnalyticsOverview } from "../services/analyticsService";
 import { listAssets } from "../services/assetsService";
 import { getContentCalendar } from "../services/contentCalendarService";
+import { generateContent } from "../services/contentAgentService";
 import { getDashboardUpcoming } from "../services/dashboardService";
 import {
   quickActionBlogPost,
@@ -36,8 +37,13 @@ import type {
   CampaignOut,
   CampaignStatusApi,
   ChannelBreakdown,
+  ContentAgentPlatform,
+  ContentAgentType,
   ContentCalendarMap,
+  TextAgentResponse,
 } from "../types/api";
+
+type ChatMessage = { role: "user" | "assistant"; text: string };
 
 type AgentId =
   | "orchestrator"
@@ -211,6 +217,16 @@ export default function Dashboard() {
   const [resultBody, setResultBody] = useState("");
 
   const [busyAction, setBusyAction] = useState<string | null>(null);
+  const [textChatMessages, setTextChatMessages] = useState<ChatMessage[]>([
+    {
+      role: "assistant",
+      text: "I can write campaign copy, compare angles, or expand the approved strategy into drafts.",
+    },
+  ]);
+  const [textLastResult, setTextLastResult] = useState<TextAgentResponse | null>(
+    null
+  );
+  const [textDraft, setTextDraft] = useState("");
 
   const [calendarData, setCalendarData] = useState<ContentCalendarMap | null>(
     null
@@ -308,62 +324,89 @@ export default function Dashboard() {
     }
   }, []);
 
-  const handleTextLinkedIn = useCallback(async () => {
-    if (!campaign) return;
-    setBusyAction("li");
-    try {
-      const res = await quickActionBlogPost({
-        topic: `LinkedIn post for ${campaign.name}`,
-        brand_id: campaign.brand_id,
-      });
-      showResult("LinkedIn post draft", res.result);
-    } catch (e) {
-      showResult(
-        "Error",
-        e instanceof Error ? e.message : "Something went wrong"
-      );
-    } finally {
-      setBusyAction(null);
-    }
-  }, [campaign, showResult]);
+  const runTextGenerate = useCallback(
+    async (
+      message: string,
+      content_type: ContentAgentType,
+      platform: ContentAgentPlatform | null,
+      busyKey: string
+    ) => {
+      if (!campaign || campaignId == null) return;
+      setBusyAction(busyKey);
+      setTextChatMessages((prev) => [...prev, { role: "user", text: message }]);
+      try {
+        const res = await generateContent({
+          message,
+          campaign_id: campaignId,
+          content_type,
+          platform: platform ?? undefined,
+        });
+        setTextLastResult(res);
+        const formatted = formatTextAgentResponse(res);
+        setTextChatMessages((prev) => [
+          ...prev,
+          { role: "assistant", text: formatted },
+        ]);
+        showResult("Generated content", formatted);
+      } catch (e) {
+        const err =
+          e instanceof Error ? e.message : "Something went wrong";
+        setTextChatMessages((prev) => [
+          ...prev,
+          { role: "assistant", text: err },
+        ]);
+        showResult("Error", err);
+      } finally {
+        setBusyAction(null);
+      }
+    },
+    [campaign, campaignId, showResult]
+  );
 
-  const handleTextEmail = useCallback(async () => {
+  const handleTextLinkedIn = useCallback(() => {
     if (!campaign) return;
-    setBusyAction("email");
-    try {
-      const res = await quickActionBlogPost({
-        topic: `Email sequence for ${campaign.name} (persuasive tone)`,
-        brand_id: campaign.brand_id,
-      });
-      showResult("Email sequence draft", res.result);
-    } catch (e) {
-      showResult(
-        "Error",
-        e instanceof Error ? e.message : "Something went wrong"
-      );
-    } finally {
-      setBusyAction(null);
-    }
-  }, [campaign, showResult]);
+    void runTextGenerate(
+      `Write a LinkedIn post for ${campaign.name}`,
+      "social_media_post",
+      "linkedin",
+      "li"
+    );
+  }, [campaign, runTextGenerate]);
 
-  const handleTextHooks = useCallback(async () => {
+  const handleTextEmail = useCallback(() => {
     if (!campaign) return;
-    setBusyAction("hooks");
-    try {
-      const res = await quickActionBlogPost({
-        topic: `Ad hook directions for ${campaign.name}`,
-        brand_id: campaign.brand_id,
-      });
-      showResult("Ad hooks", res.result);
-    } catch (e) {
-      showResult(
-        "Error",
-        e instanceof Error ? e.message : "Something went wrong"
+    void runTextGenerate(
+      `Draft an email sequence for ${campaign.name}`,
+      "email_campaign",
+      "email",
+      "email"
+    );
+  }, [campaign, runTextGenerate]);
+
+  const handleTextHooks = useCallback(() => {
+    if (!campaign) return;
+    void runTextGenerate(
+      `Create ad hook directions for ${campaign.name}`,
+      "promotional_message",
+      "linkedin",
+      "hooks"
+    );
+  }, [campaign, runTextGenerate]);
+
+  const handleTextChatSend = useCallback(
+    (message = textDraft) => {
+      const trimmed = message.trim();
+      if (!trimmed || !campaign) return;
+      setTextDraft("");
+      void runTextGenerate(
+        trimmed,
+        "social_media_post",
+        "instagram",
+        "textchat"
       );
-    } finally {
-      setBusyAction(null);
-    }
-  }, [campaign, showResult]);
+    },
+    [textDraft, campaign, runTextGenerate]
+  );
 
   const handleImagePrompt = useCallback(async () => {
     if (!campaign) return;
@@ -689,6 +732,7 @@ export default function Dashboard() {
                   ) : activeAgentId === "text" ? (
                     <TextPanels
                       busyAction={busyAction}
+                      lastResult={textLastResult}
                       onLinkedIn={handleTextLinkedIn}
                       onEmail={handleTextEmail}
                       onHooks={handleTextHooks}
@@ -729,6 +773,10 @@ export default function Dashboard() {
               onTextLi={handleTextLinkedIn}
               onTextEmail={handleTextEmail}
               onTextHooks={handleTextHooks}
+              textChatMessages={textChatMessages}
+              textDraft={textDraft}
+              onTextDraftChange={setTextDraft}
+              onTextChatSend={handleTextChatSend}
               onImgPrompt={handleImagePrompt}
               onImgAssets={handleImageAssets}
               onVideoScript={handleVideoScript}
@@ -1068,11 +1116,13 @@ function CalendarPanels({
 
 function TextPanels({
   busyAction,
+  lastResult,
   onLinkedIn,
   onEmail,
   onHooks,
 }: {
   busyAction: string | null;
+  lastResult: TextAgentResponse | null;
   onLinkedIn: () => void;
   onEmail: () => void;
   onHooks: () => void;
@@ -1081,16 +1131,25 @@ function TextPanels({
     <div className="grid gap-5 2xl:grid-cols-[minmax(0,1fr)_320px]">
       <section className="rounded-md border border-white/10 bg-white/[0.04] p-4">
         <h2 className="text-2xl font-semibold">Text Generation</h2>
-        {/*
-          AGENT_REQUIRED: content_agent
-          This feature requires the content_agent to be connected.
-          Endpoint: POST /api/v1/agents/content/session
-          Integration point: Replace this placeholder when the agent is delivered.
-        */}
-        <p className="mt-3 text-sm text-white/70">
-          Text generation workspace (draft queue, progress) will appear here when
-          the content agent is connected.
+        <p className="mt-2 text-sm text-white/50">
+          Powered by POST /api/v1/agents/content/generate
         </p>
+        {busyAction === "li" ||
+        busyAction === "email" ||
+        busyAction === "hooks" ||
+        busyAction === "textchat" ? (
+          <p className="mt-4 flex items-center gap-2 text-sm text-white/60">
+            <Loader2 className="size-4 animate-spin" /> Generating…
+          </p>
+        ) : lastResult ? (
+          <div className="mt-4 max-h-96 overflow-y-auto rounded-md border border-white/10 bg-[#0D1018] p-3 text-sm leading-6 text-white/80">
+            <TextAgentResultBody result={lastResult} />
+          </div>
+        ) : (
+          <p className="mt-3 text-sm text-white/70">
+            Use quick actions or Ask Text to generate copy for this campaign.
+          </p>
+        )}
       </section>
 
       <section className="rounded-md border border-white/10 bg-white/[0.04] p-4">
@@ -1416,6 +1475,10 @@ function RightPanel({
   onTextLi,
   onTextEmail,
   onTextHooks,
+  textChatMessages,
+  textDraft,
+  onTextDraftChange,
+  onTextChatSend,
   onImgPrompt,
   onImgAssets,
   onVideoScript,
@@ -1430,6 +1493,10 @@ function RightPanel({
   onTextLi: () => void;
   onTextEmail: () => void;
   onTextHooks: () => void;
+  textChatMessages: ChatMessage[];
+  textDraft: string;
+  onTextDraftChange: (v: string) => void;
+  onTextChatSend: (message?: string) => void;
   onImgPrompt: () => void;
   onImgAssets: () => void;
   onVideoScript: () => void;
@@ -1523,12 +1590,28 @@ function RightPanel({
     );
   }
 
+  if (activeAgent.id === "text") {
+    return (
+      <TextRightAside
+        activeAgent={activeAgent}
+        campaignName={campaign?.name ?? "—"}
+        messages={textChatMessages}
+        draft={textDraft}
+        onDraftChange={onTextDraftChange}
+        onSend={onTextChatSend}
+        nextActions={nextActions}
+        onTextLi={onTextLi}
+        onTextEmail={onTextEmail}
+        onTextHooks={onTextHooks}
+        busyAction={busyAction}
+      />
+    );
+  }
+
   const placeholder =
     activeAgent.id === "calendar"
       ? "Calendar agent coming soon"
-      : activeAgent.id === "text"
-        ? "Text agent coming soon"
-        : activeAgent.id === "image"
+      : activeAgent.id === "image"
           ? "Image agent coming soon"
           : activeAgent.id === "video"
             ? "Video agent coming soon"
@@ -1538,11 +1621,6 @@ function RightPanel({
     if (activeAgent.id === "calendar") {
       if (label === "Generate next 14 days") void onCalendar14();
       if (label === "Balance channels") void onCalendarBalance();
-    }
-    if (activeAgent.id === "text") {
-      if (label === "Write LinkedIn posts") void onTextLi();
-      if (label === "Draft email sequence") void onTextEmail();
-      if (label === "Create ad hooks") void onTextHooks();
     }
     if (activeAgent.id === "image") {
       if (label === "Create image prompts") void onImgPrompt();
@@ -1773,6 +1851,180 @@ function AnalyticsRightAside({
             placeholder="Analytics agent coming soon"
             className="h-11 border-white/10 bg-white/5 text-white/50"
           />
+        </div>
+      </div>
+    </aside>
+  );
+}
+
+function formatTextAgentResponse(res: TextAgentResponse): string {
+  const parts: string[] = [];
+  if (res.subject_line) {
+    parts.push(`Subject: ${res.subject_line}`);
+  }
+  parts.push(res.generated_content);
+  if (res.hashtags?.length) {
+    parts.push(`\nHashtags: ${res.hashtags.join(" ")}`);
+  }
+  if (res.variations?.length) {
+    parts.push("\nVariations:");
+    for (const v of res.variations) {
+      parts.push(`\nVariation ${v.variation_id}:\n${v.content}`);
+    }
+  }
+  if (res.seo) {
+    parts.push(
+      `\nSEO title: ${res.seo.suggested_title}\nMeta: ${res.seo.meta_description}\nKeywords: ${res.seo.keywords.join(", ")}`
+    );
+  }
+  if (res.char_count != null) {
+    parts.push(
+      `\n${res.char_count} characters${res.within_limit === false ? " (over limit)" : ""}`
+    );
+  }
+  return parts.join("\n");
+}
+
+function TextAgentResultBody({ result }: { result: TextAgentResponse }) {
+  return (
+    <div className="space-y-3 whitespace-pre-wrap">
+      {result.subject_line ? (
+        <p>
+          <span className="text-white/50">Subject: </span>
+          {result.subject_line}
+        </p>
+      ) : null}
+      <p>{result.generated_content}</p>
+      {result.hashtags?.length ? (
+        <p className="text-neonBlue">{result.hashtags.join(" ")}</p>
+      ) : null}
+      {result.variations?.map((v) => (
+        <div
+          key={v.variation_id}
+          className="rounded border border-white/10 p-2"
+        >
+          <p className="text-xs text-white/45">Variation {v.variation_id}</p>
+          <p className="mt-1">{v.content}</p>
+        </div>
+      ))}
+      {result.char_count != null ? (
+        <p className="text-xs text-white/45">{result.char_count} characters</p>
+      ) : null}
+    </div>
+  );
+}
+
+function TextRightAside({
+  activeAgent,
+  campaignName,
+  messages,
+  draft,
+  onDraftChange,
+  onSend,
+  nextActions,
+  onTextLi,
+  onTextEmail,
+  onTextHooks,
+  busyAction,
+}: {
+  activeAgent: Agent;
+  campaignName: string;
+  messages: ChatMessage[];
+  draft: string;
+  onDraftChange: (v: string) => void;
+  onSend: (message?: string) => void;
+  nextActions: string[];
+  onTextLi: () => void;
+  onTextEmail: () => void;
+  onTextHooks: () => void;
+  busyAction: string | null;
+}) {
+  const Icon = activeAgent.icon;
+  const isBusy =
+    busyAction === "li" ||
+    busyAction === "email" ||
+    busyAction === "hooks" ||
+    busyAction === "textchat";
+
+  const runQuick = (label: string) => {
+    if (label === "Write LinkedIn posts") onTextLi();
+    if (label === "Draft email sequence") onTextEmail();
+    if (label === "Create ad hooks") onTextHooks();
+  };
+
+  return (
+    <aside className="border-t border-white/10 bg-[#0D1018] xl:border-l xl:border-t-0">
+      <div className="flex h-full min-h-[560px] flex-col">
+        <div className="border-b border-white/10 px-4 py-4">
+          <div className="flex items-center gap-3">
+            <div className="flex size-10 items-center justify-center rounded-md bg-white/10">
+              <Icon className={`size-5 ${activeAgent.accent}`} />
+            </div>
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold">{activeAgent.name}</p>
+              <p className="truncate text-xs text-white/45">{campaignName}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex-1 space-y-3 overflow-y-auto px-4 py-4">
+          {messages.map((message, index) => (
+            <div
+              key={`${message.role}-${index}`}
+              className={`rounded-md px-3 py-2 text-sm leading-6 ${
+                message.role === "user"
+                  ? "ml-8 bg-neonBlue text-cosmic"
+                  : "mr-8 bg-white/[0.07] text-white/80"
+              }`}
+            >
+              <p className="whitespace-pre-wrap">{message.text}</p>
+            </div>
+          ))}
+          {isBusy ? (
+            <p className="flex items-center gap-2 text-xs text-white/50">
+              <Loader2 className="size-3 animate-spin" /> Generating…
+            </p>
+          ) : null}
+        </div>
+
+        <div className="border-t border-white/10 p-4">
+          <div className="mb-3 grid gap-2">
+            {nextActions.map((action) => (
+              <button
+                key={action}
+                type="button"
+                disabled={isBusy}
+                onClick={() => runQuick(action)}
+                className="rounded-md border border-white/10 px-3 py-2 text-left text-xs text-white/70 transition hover:border-neonBlue/60 hover:text-white disabled:opacity-50"
+              >
+                {action}
+              </button>
+            ))}
+          </div>
+
+          <form
+            className="flex gap-2"
+            onSubmit={(e) => {
+              e.preventDefault();
+              onSend();
+            }}
+          >
+            <Input
+              value={draft}
+              onChange={(e) => onDraftChange(e.target.value)}
+              disabled={isBusy}
+              placeholder="Ask Text"
+              className="h-11 border-white/10 bg-white text-cosmic placeholder:text-slate-500"
+            />
+            <Button
+              type="submit"
+              size="icon"
+              disabled={isBusy || !draft.trim()}
+              className="h-11 w-11 bg-neonPink text-white hover:bg-neonPink/90"
+            >
+              <Send className="size-4" />
+            </Button>
+          </form>
         </div>
       </div>
     </aside>

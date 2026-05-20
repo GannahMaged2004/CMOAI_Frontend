@@ -27,6 +27,8 @@ app.include_router(api_router, prefix="/api/v1")
 Easy Auth 
 username: ahmedsaber@example.com
 password: SecurePassword123!
+ahmedsaber@test.com
+
 '''
 
 

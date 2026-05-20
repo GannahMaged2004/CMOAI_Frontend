@@ -39,5 +39,18 @@ class Settings(BaseSettings):
     GROQ_MODEL: str = "llama-3.3-70b-versatile"
     LLM_PROVIDER: str = "groq"  # "groq" or "openai"
 
+    # ── OpenAI (optional) ────────────────────────────────────
+    OPENAI_API_KEY: str = ""
+
+    # ── LangSmith / LangChain tracing (optional) ─────────────
+    LANGCHAIN_API_KEY: str = ""
+    LANGCHAIN_TRACING_V2: str = "false"
+    LANGCHAIN_PROJECT: str = "cmo-ai"
+
+    # ── Cohere + Pinecone (content agent RAG) ────────────────
+    COHERE_API_KEY: str = ""
+    PINECONE_API_KEY: str = ""
+    PINECONE_INDEX_NAME: str = "cmo-content-kb"
+
 
 settings = Settings()
