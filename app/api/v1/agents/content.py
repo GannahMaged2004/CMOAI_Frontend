@@ -10,11 +10,12 @@ from app.models.brand import Brand
 from app.models.campaign import Campaign
 from app.models.user import User
 from app.schemas.agents.content_agent import (
+    ContentAgentStatus,
     ContentRequest,
     TextAgentRequest,
     TextAgentResponse,
 )
-from app.services.content_agent import run_content_agent
+from app.services.content_agent import get_content_agent_status, run_content_agent
 
 router = APIRouter(prefix="/agents/content", tags=["Content Agent"])
 
@@ -32,6 +33,11 @@ def _map_tone(tone_of_voice: str | None) -> ToneLiteral:
     if "inspir" in lower or "bold" in lower:
         return "inspirational"
     return "professional"
+
+
+@router.get("/status", response_model=ContentAgentStatus)
+async def content_agent_status():
+    return get_content_agent_status()
 
 
 @router.post("/generate", response_model=TextAgentResponse)

@@ -3,12 +3,7 @@ import { features } from "../data/features";
 import FeatureDemo from "../components/demo/FeatureDemo";
 import { Button } from "../components/ui/button";
 
-import {
-  Sparkles,
-  Target,
-  Rocket,
-  Link2,
-} from "lucide-react";
+import { Sparkles, Target, Rocket, Link2 } from "lucide-react";
 
 export default function FeatureDetails() {
   const { id } = useParams();
@@ -28,15 +23,14 @@ export default function FeatureDetails() {
 
   return (
     <div className="min-h-screen bg-[#0A0A0F] text-white">
-
       {/* HERO */}
       <section className="relative px-6 overflow-hidden text-center py-28">
-
         <div className="absolute w-[600px] h-[600px] bg-purple-500/20 blur-[120px] rounded-full top-0 left-1/2 -translate-x-1/2" />
 
         <div className="relative max-w-3xl mx-auto space-y-6">
-
-          <div className={`w-20 h-20 mx-auto flex items-center justify-center rounded-2xl ${feature.bg}`}>
+          <div
+            className={`w-20 h-20 mx-auto flex items-center justify-center rounded-2xl ${feature.bg}`}
+          >
             <Icon className={`w-10 h-10 ${feature.color}`} />
           </div>
 
@@ -50,7 +44,6 @@ export default function FeatureDetails() {
           >
             Get Started
           </Button>
-
         </div>
       </section>
 
@@ -99,9 +92,7 @@ export default function FeatureDetails() {
       <section className="max-w-3xl px-6 py-16 mx-auto text-center">
         <div className="flex items-center justify-center gap-2 mb-4 text-neonPink">
           <Link2 />
-          <h2 className="text-2xl font-bold">
-            How it fits into the platform
-          </h2>
+          <h2 className="text-2xl font-bold">How it fits into the platform</h2>
         </div>
 
         <p className="text-white/70">{feature.connection}</p>
@@ -127,7 +118,6 @@ export default function FeatureDetails() {
           View Pricing
         </Button>
       </section>
-
     </div>
   );
 }

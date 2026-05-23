@@ -37,19 +37,38 @@ export const refreshToken = async (refresh_token: string): Promise<TokenResponse
     requireAuth: false,
   });
 };
-
 export const forgotPassword = async (email: string): Promise<MessageResponse> => {
-  return request<MessageResponse>('/auth/forgot-password', {
-    method: 'POST',
+  return request<MessageResponse>("/auth/forgot-password", {
+    method: "POST",
     body: JSON.stringify({ email }),
     requireAuth: false,
   });
 };
 
-export const resetPassword = async (token: string, new_password: string): Promise<MessageResponse> => {
-  return request<MessageResponse>('/auth/reset-password', {
-    method: 'POST',
-    body: JSON.stringify({ token, new_password }),
+export const verifyResetOtp = async (
+  email: string,
+  otp: string
+): Promise<{ message: string; reset_token: string }> => {
+  return request<{ message: string; reset_token: string }>(
+    "/auth/verify-reset-otp",
+    {
+      method: "POST",
+      body: JSON.stringify({ email, otp }),
+      requireAuth: false,
+    }
+  );
+};
+
+export const resetPassword = async (
+  data: {
+    email: string;
+    token: string;
+    new_password: string;
+  }
+): Promise<MessageResponse> => {
+  return request<MessageResponse>("/auth/reset-password", {
+    method: "POST",
+    body: JSON.stringify(data),
     requireAuth: false,
   });
 };

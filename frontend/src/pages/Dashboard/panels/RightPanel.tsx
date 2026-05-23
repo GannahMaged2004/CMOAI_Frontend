@@ -1,0 +1,429 @@
+import { useMemo, useState } from "react";
+import { Send } from "lucide-react";
+import { Button } from "../../../components/ui/button";
+import { Input } from "../../../components/ui/input";
+import type { BrandOut, CampaignOut } from "../../../types/api";
+import type { Agent, AgentId, ChatMessage } from "../types";
+import { buildAgentSuggestions, getAgentDemoIntro } from "../utils";
+import { SuggestionList } from "../components/SuggestionList";
+import { TextRightAside } from "./TextRightAside";
+import { AnalyticsRightAside } from "./AnalyticsRightAside";
+
+export function RightPanel({
+  activeAgent,
+  campaign,
+  brand,
+  brandAudience,
+  nextActions,
+  onDemoAction,
+  onCalendar14,
+  onCalendarBalance,
+  onTextLi,
+  onTextEmail,
+  onTextHooks,
+  textChatMessages,
+  textDraft,
+  onTextDraftChange,
+  onTextChatSend,
+  onImgPrompt,
+  onImgAssets,
+  onVideoScript,
+  onVideoBrief,
+  busyAction,
+}: {
+  activeAgent: Agent;
+  campaign: CampaignOut | null;
+  brand: BrandOut | null;
+  brandAudience: string | null;
+  nextActions: string[];
+  onDemoAction: (agentId: AgentId, action: string) => void;
+  onCalendar14: () => void;
+  onCalendarBalance: () => void;
+  onTextLi: () => void;
+  onTextEmail: () => void;
+  onTextHooks: () => void;
+  textChatMessages: ChatMessage[];
+  textDraft: string;
+  onTextDraftChange: (v: string) => void;
+  onTextChatSend: (message?: string) => void;
+  onImgPrompt: () => void;
+  onImgAssets: () => void;
+  onVideoScript: () => void;
+  onVideoBrief: () => void;
+  busyAction: string | null;
+}) {
+  const Icon = activeAgent.icon;
+  const [demoDraft, setDemoDraft] = useState("");
+  const suggestions = useMemo(
+    () => buildAgentSuggestions(activeAgent.id, campaign, brand),
+    [activeAgent.id, brand, campaign],
+  );
+
+  const sendDemoRequest = (fallbackAction: string) => {
+    const action = demoDraft.trim() || fallbackAction;
+    onDemoAction(activeAgent.id, action);
+    setDemoDraft("");
+  };
+
+  const runSuggestion = (action: string) => {
+    if (activeAgent.id === "text") {
+      onTextChatSend(action);
+      return;
+    }
+    if (activeAgent.id === "calendar") {
+      if (action === "Generate next 14 days") {
+        void onCalendar14();
+        return;
+      }
+      if (action === "Balance channels") {
+        void onCalendarBalance();
+        return;
+      }
+      onDemoAction("calendar", action);
+      return;
+    }
+    if (activeAgent.id === "image") {
+      if (action === "Create image prompts") {
+        void onImgPrompt();
+        return;
+      }
+      if (action === "Draft asset briefs") {
+        void onImgAssets();
+        return;
+      }
+      onDemoAction("image", action);
+      return;
+    }
+    if (activeAgent.id === "video") {
+      if (action === "Write short video script") {
+        void onVideoScript();
+        return;
+      }
+      if (action === "Plan creator brief") {
+        void onVideoBrief();
+        return;
+      }
+      onDemoAction("video", action);
+      return;
+    }
+    if (activeAgent.id === "analytics") {
+      onDemoAction("analytics", action);
+      return;
+    }
+    if (activeAgent.id === "brand") {
+      onDemoAction("brand", action);
+      return;
+    }
+    onDemoAction("orchestrator", action);
+  };
+
+  if (activeAgent.id === "orchestrator") {
+    return (
+      <aside className="border-t border-white/10 bg-[#0D1018] xl:border-l xl:border-t-0">
+        <div className="flex h-full min-h-[560px] flex-col">
+          <div className="px-4 py-4 border-b border-white/10">
+            <div className="flex items-center gap-3">
+              <div className="flex items-center justify-center rounded-md size-10 bg-white/10">
+                <Icon className={`size-5 ${activeAgent.accent}`} />
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-semibold truncate">Orchestrator</p>
+                <p className="text-xs truncate text-white/45">
+                  {campaign?.name ?? "-"}
+                </p>
+              </div>
+            </div>
+          </div>
+          <div className="flex-1 px-4 py-4 space-y-3 overflow-y-auto">
+            <div className="rounded-md bg-white/[0.07] px-3 py-2 text-sm leading-6 text-white/80">
+              {getAgentDemoIntro("orchestrator", campaign, brandAudience)}
+            </div>
+            <SuggestionList
+              suggestions={suggestions}
+              onSelect={runSuggestion}
+            />
+            {nextActions.map((action) => (
+              <button
+                key={action}
+                type="button"
+                onClick={() => onDemoAction("orchestrator", action)}
+                className="w-full px-3 py-2 text-xs text-left transition border rounded-md border-white/10 text-white/70 hover:border-neonBlue/60 hover:text-white"
+              >
+                {action}
+              </button>
+            ))}
+          </div>
+          <form
+            className="flex gap-2 p-4 border-t border-white/10"
+            onSubmit={(e) => {
+              e.preventDefault();
+              sendDemoRequest("Summarize campaign readiness");
+            }}
+          >
+            <Input
+              value={demoDraft}
+              onChange={(e) => setDemoDraft(e.target.value)}
+              placeholder="Ask Orchestrator"
+              className="bg-white h-11 border-white/10 text-cosmic placeholder:text-slate-500"
+            />
+            <Button
+              type="submit"
+              size="icon"
+              disabled={!demoDraft.trim()}
+              className="text-white h-11 w-11 bg-neonPink hover:bg-neonPink/90"
+            >
+              <Send className="size-4" />
+            </Button>
+          </form>
+        </div>
+      </aside>
+    );
+  }
+
+  if (activeAgent.id === "brand") {
+    return (
+      <aside className="border-t border-white/10 bg-[#0D1018] xl:border-l xl:border-t-0">
+        <div className="flex h-full min-h-[560px] flex-col">
+          <div className="px-4 py-4 border-b border-white/10">
+            <div className="flex items-center gap-3">
+              <div className="flex items-center justify-center rounded-md size-10 bg-white/10">
+                <Icon className={`size-5 ${activeAgent.accent}`} />
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-semibold truncate">
+                  {activeAgent.name}
+                </p>
+                <p className="text-xs truncate text-white/45">
+                  {campaign?.name ?? "-"}
+                </p>
+              </div>
+            </div>
+          </div>
+          <div className="flex-1 px-4 py-4 space-y-3 overflow-y-auto">
+            <p className="text-sm text-white/70">
+              {getAgentDemoIntro("brand", campaign, brandAudience)}
+            </p>
+            <SuggestionList
+              suggestions={suggestions}
+              onSelect={runSuggestion}
+            />
+            {nextActions.map((action) => (
+              <button
+                key={action}
+                type="button"
+                onClick={() => onDemoAction("brand", action)}
+                className="w-full px-3 py-2 text-xs text-left transition border rounded-md border-white/10 text-white/70 hover:border-neonBlue/60 hover:text-white"
+              >
+                {action}
+              </button>
+            ))}
+          </div>
+          <form
+            className="flex gap-2 p-4 border-t border-white/10"
+            onSubmit={(e) => {
+              e.preventDefault();
+              sendDemoRequest("Refine positioning");
+            }}
+          >
+            <Input
+              value={demoDraft}
+              onChange={(e) => setDemoDraft(e.target.value)}
+              placeholder="Ask Brand"
+              className="bg-white h-11 border-white/10 text-cosmic placeholder:text-slate-500"
+            />
+            <Button
+              type="submit"
+              size="icon"
+              disabled={!demoDraft.trim()}
+              className="text-white h-11 w-11 bg-neonPink hover:bg-neonPink/90"
+            >
+              <Send className="size-4" />
+            </Button>
+          </form>
+        </div>
+      </aside>
+    );
+  }
+
+  if (activeAgent.id === "analytics") {
+    return (
+      <AnalyticsRightAside
+        activeAgent={activeAgent}
+        campaignName={campaign?.name ?? "-"}
+        suggestions={suggestions}
+        onDemoAction={onDemoAction}
+      />
+    );
+  }
+
+  if (activeAgent.id === "text") {
+    return (
+      <TextRightAside
+        activeAgent={activeAgent}
+        campaignName={campaign?.name ?? "-"}
+        messages={textChatMessages}
+        draft={textDraft}
+        onDraftChange={onTextDraftChange}
+        onSend={onTextChatSend}
+        nextActions={nextActions}
+        suggestions={suggestions}
+        onTextLi={onTextLi}
+        onTextEmail={onTextEmail}
+        onTextHooks={onTextHooks}
+        busyAction={busyAction}
+      />
+    );
+  }
+
+  const assistantIntro = getAgentDemoIntro(
+    activeAgent.id,
+    campaign,
+    brandAudience,
+  );
+
+  const runQuick = (label: string) => {
+    if (activeAgent.id === "calendar") {
+      if (label === "Generate next 14 days") void onCalendar14();
+      if (label === "Balance channels") void onCalendarBalance();
+      if (label === "Find calendar gaps") onDemoAction("calendar", label);
+    }
+    if (activeAgent.id === "image") {
+      if (label === "Create image prompts") void onImgPrompt();
+      if (label === "Draft asset briefs") void onImgAssets();
+      if (label === "Review visual consistency") onDemoAction("image", label);
+    }
+    if (activeAgent.id === "video") {
+      if (label === "Write short video script") void onVideoScript();
+      if (label === "Create storyboard") onDemoAction("video", label);
+      if (label === "Plan creator brief") void onVideoBrief();
+    }
+  };
+
+  const isBusy = (label: string) => {
+    if (label === "Generate next 14 days") return busyAction === "cal14";
+    if (label === "Balance channels") return busyAction === "channels";
+    if (label === "Write LinkedIn posts") return busyAction === "li";
+    if (label === "Draft email sequence") return busyAction === "email";
+    if (label === "Create ad hooks") return busyAction === "hooks";
+    if (label === "Create image prompts") return busyAction === "imgp";
+    if (label === "Draft asset briefs") return busyAction === "assets";
+    if (label === "Write short video script") return busyAction === "vscript";
+    if (label === "Plan creator brief") return busyAction === "vbrief";
+    return false;
+  };
+
+  return (
+    <aside className="border-t border-white/10 bg-[#0D1018] xl:border-l xl:border-t-0">
+      <div className="flex h-full min-h-[560px] flex-col">
+        <div className="px-4 py-4 border-b border-white/10">
+          <div className="flex items-center gap-3">
+            <div className="flex items-center justify-center rounded-md size-10 bg-white/10">
+              <Icon className={`size-5 ${activeAgent.accent}`} />
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-semibold truncate">
+                {activeAgent.name}
+              </p>
+              <p className="text-xs truncate text-white/45">
+                {campaign?.name ?? "-"}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex-1 px-4 py-4 space-y-3 overflow-y-auto">
+          <div className="rounded-md bg-white/[0.07] px-3 py-2 text-sm leading-6 text-white/80">
+            {assistantIntro}
+          </div>
+          <SuggestionList suggestions={suggestions} onSelect={runSuggestion} />
+        </div>
+
+        <div className="p-4 border-t border-white/10">
+          <div className="grid gap-2 mb-3">
+            {nextActions.map((action) => {
+              if (
+                activeAgent.id === "calendar" &&
+                action === "Find calendar gaps"
+              ) {
+                return (
+                  <button
+                    key={action}
+                    type="button"
+                    onClick={() => runQuick(action)}
+                    className="px-3 py-2 text-xs text-left transition border rounded-md border-white/10 text-white/70 hover:border-neonBlue/60 hover:text-white"
+                  >
+                    {action}
+                  </button>
+                );
+              }
+              if (
+                activeAgent.id === "image" &&
+                action === "Review visual consistency"
+              ) {
+                return (
+                  <button
+                    key={action}
+                    type="button"
+                    onClick={() => runQuick(action)}
+                    className="px-3 py-2 text-xs text-left transition border rounded-md border-white/10 text-white/70 hover:border-neonBlue/60 hover:text-white"
+                  >
+                    {action}
+                  </button>
+                );
+              }
+              if (
+                activeAgent.id === "video" &&
+                action === "Create storyboard"
+              ) {
+                return (
+                  <button
+                    key={action}
+                    type="button"
+                    onClick={() => runQuick(action)}
+                    className="px-3 py-2 text-xs text-left transition border rounded-md border-white/10 text-white/70 hover:border-neonBlue/60 hover:text-white"
+                  >
+                    {action}
+                  </button>
+                );
+              }
+              return (
+                <button
+                  key={action}
+                  type="button"
+                  disabled={isBusy(action)}
+                  onClick={() => runQuick(action)}
+                  className="px-3 py-2 text-xs text-left transition border rounded-md border-white/10 text-white/70 hover:border-neonBlue/60 hover:text-white disabled:opacity-50"
+                >
+                  {isBusy(action) ? "Loading..." : action}
+                </button>
+              );
+            })}
+          </div>
+
+          <form
+            className="flex gap-2"
+            onSubmit={(e) => {
+              e.preventDefault();
+              sendDemoRequest(nextActions[0] ?? `Ask ${activeAgent.shortName}`);
+            }}
+          >
+            <Input
+              value={demoDraft}
+              onChange={(e) => setDemoDraft(e.target.value)}
+              placeholder={`Ask ${activeAgent.shortName}`}
+              className="bg-white h-11 border-white/10 text-cosmic placeholder:text-slate-500"
+            />
+            <Button
+              type="submit"
+              size="icon"
+              disabled={!demoDraft.trim()}
+              className="text-white h-11 w-11 bg-neonPink hover:bg-neonPink/90"
+            >
+              <Send className="size-4" />
+            </Button>
+          </form>
+        </div>
+      </div>
+    </aside>
+  );
+}

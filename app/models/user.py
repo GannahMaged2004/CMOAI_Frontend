@@ -14,3 +14,6 @@ class User(Base):
     role = Column(ENUM(UserRole, name='user_role', create_type=False), nullable=False, default=UserRole.owner)
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    password_reset_otp_hash = Column(String(255), nullable=True)
+    password_reset_otp_expiry = Column(DateTime(timezone=True), nullable=True)
+    password_reset_verified = Column(DateTime, nullable=True)

@@ -1,6 +1,7 @@
 from pydantic import BaseModel
 from typing import Literal, Optional
 
+
 class ContentRequest(BaseModel):
     content_type: Literal["social_media_post", "email_campaign", "promotional_message"]
     brand_name: str
@@ -12,15 +13,18 @@ class ContentRequest(BaseModel):
     cta: Optional[str] = None
     extra_notes: Optional[str] = None
 
+
 class SEOData(BaseModel):
     keywords: list[str]
     meta_description: str
     suggested_title: str
 
+
 class ContentVariation(BaseModel):
     variation_id: int
     content: str
     platform_note: str
+
 
 class ContentOutput(BaseModel):
     content_type: str
@@ -36,8 +40,6 @@ class ContentOutput(BaseModel):
 
 
 class TextAgentRequest(BaseModel):
-    """HTTP body for POST /agents/content/generate."""
-
     message: str
     campaign_id: int
     content_type: Literal["social_media_post", "email_campaign", "promotional_message"]
@@ -47,6 +49,11 @@ class TextAgentRequest(BaseModel):
 
 
 class TextAgentResponse(ContentOutput):
-    """API response — same fields as ContentOutput."""
-
     pass
+
+
+class ContentAgentStatus(BaseModel):
+    provider: str
+    model: str
+    mode: Literal["live", "fallback"]
+    configured: bool

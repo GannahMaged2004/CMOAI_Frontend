@@ -10,7 +10,7 @@ import {
 import { STORAGE_KEYS } from "../constants/storage";
 import { getBrand } from "../services/brandService";
 import { getCampaign, listCampaigns } from "../services/campaignService";
-import type { CampaignOut } from "../types/api";
+import type { BrandOut, CampaignOut } from "../types/api";
 
 type CampaignContextValue = {
   campaigns: CampaignOut[];
@@ -21,6 +21,8 @@ type CampaignContextValue = {
   refresh: () => Promise<void>;
   isLoading: boolean;
   error: string | null;
+  /** Loaded brand for the active campaign (or null) */
+  brand: BrandOut | null;
   /** Target audience for active campaign's brand (or null) */
   brandAudience: string | null;
   /** Append a newly created campaign and select it */
@@ -42,6 +44,7 @@ export function CampaignProvider({ children }: { children: ReactNode }) {
     readStoredCampaignId
   );
   const [campaign, setCampaign] = useState<CampaignOut | null>(null);
+  const [brand, setBrand] = useState<BrandOut | null>(null);
   const [brandAudience, setBrandAudience] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -62,6 +65,7 @@ export function CampaignProvider({ children }: { children: ReactNode }) {
         setCampaignIdState(null);
         localStorage.removeItem(STORAGE_KEYS.ACTIVE_CAMPAIGN_ID);
         setCampaign(null);
+        setBrand(null);
         setBrandAudience(null);
         return;
       }
@@ -77,15 +81,18 @@ export function CampaignProvider({ children }: { children: ReactNode }) {
       setCampaign(detail);
 
       try {
-        const brand = await getBrand(detail.brand_id);
-        setBrandAudience(brand.target_audience ?? null);
+        const brandDetail = await getBrand(detail.brand_id);
+        setBrand(brandDetail);
+        setBrandAudience(brandDetail.target_audience ?? null);
       } catch {
+        setBrand(null);
         setBrandAudience(null);
       }
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Something went wrong";
       setError(msg);
       setCampaign(null);
+      setBrand(null);
       setBrandAudience(null);
     } finally {
       setIsLoading(false);
@@ -103,6 +110,7 @@ export function CampaignProvider({ children }: { children: ReactNode }) {
         return [...prev, c];
       });
       setCampaign(c);
+      setBrand(null);
       setCampaignId(c.id);
     },
     [setCampaignId]
@@ -117,6 +125,7 @@ export function CampaignProvider({ children }: { children: ReactNode }) {
       refresh: load,
       isLoading,
       error,
+      brand,
       brandAudience,
       registerNewCampaign,
     }),
@@ -128,6 +137,7 @@ export function CampaignProvider({ children }: { children: ReactNode }) {
       load,
       isLoading,
       error,
+      brand,
       brandAudience,
       registerNewCampaign,
     ]

@@ -132,7 +132,10 @@ export async function request<T>(endpoint: string, options: RequestOptions = {})
          errorMessage = "Validation error";
        }
     } else if (response.status === 500) {
-      errorMessage = 'Something went wrong';
+      errorMessage =
+        (typeof errorData?.detail === 'string' && errorData.detail) ||
+        (typeof errorData?.message === 'string' && errorData.message) ||
+        'Something went wrong';
     } else {
       errorMessage =
         (typeof errorData?.detail === 'string' && errorData.detail) ||

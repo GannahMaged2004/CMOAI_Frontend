@@ -33,6 +33,7 @@ export interface TeamOut {
 export interface BrandOut {
   id: number;
   brand_name: string;
+  logo_url: string | null;
   industry: string | null;
   tone_of_voice: string | null;
   target_audience: string | null;
@@ -201,4 +202,11 @@ export interface TextAgentResponse {
   platform_rules?: Record<string, unknown> | null;
   char_count?: number | null;
   within_limit?: boolean | null;
+}
+
+export interface ContentAgentStatus {
+  provider: string;
+  model: string;
+  mode: "live" | "fallback";
+  configured: boolean;
 }

@@ -1,10 +1,15 @@
 """
-Authentication service — register, login, and token refresh.
+Authentication service for register, login, token refresh, and password reset OTP.
 
-All database access uses synchronous SQLAlchemy (matching the existing
-project setup in app/db/session.py).
+All database access uses synchronous SQLAlchemy to match the existing auth routes.
 """
 
+from __future__ import annotations
+
+from datetime import datetime, timedelta, timezone
+import random
+
+from jose import JWTError
 from sqlalchemy.orm import Session
 
 from app.core.exceptions import AlreadyExists, NotFound, Unauthorized
@@ -20,14 +25,18 @@ from app.schemas.auth import (
     LoginRequest,
     RefreshTokenRequest,
     RegisterRequest,
+    ResetPasswordRequest,
     TokenResponse,
+    VerifyOTPResponse,
 )
+from app.schemas.common import MessageResponse
+from app.services.email_service import send_reset_otp_email
 
+OTP_EXPIRY_MINUTES = 10
+RESET_TOKEN_EXPIRY_MINUTES = 15
 
-# ── Helpers ───────────────────────────────────────────────────
 
 def _build_token_response(user: User) -> TokenResponse:
-    """Return a TokenResponse with fresh access and refresh tokens for *user*."""
     payload = {"sub": user.email}
     return TokenResponse(
         access_token=create_access_token(payload),
@@ -39,14 +48,11 @@ def _get_user_by_email(email: str, db: Session) -> User | None:
     return db.query(User).filter(User.email == email).first()
 
 
-# ── Service functions ─────────────────────────────────────────
+def _generate_otp() -> str:
+    return f"{random.SystemRandom().randint(0, 999999):06d}"
+
 
 def register_user(data: RegisterRequest, db: Session) -> TokenResponse:
-    """Create a new user account and return a token pair.
-
-    Raises:
-        AlreadyExists: if the e-mail address is already registered.
-    """
     if _get_user_by_email(data.email, db):
         raise AlreadyExists("Email")
 
@@ -63,11 +69,6 @@ def register_user(data: RegisterRequest, db: Session) -> TokenResponse:
 
 
 def login_user(data: LoginRequest, db: Session) -> TokenResponse:
-    """Verify credentials and return a token pair.
-
-    Raises:
-        Unauthorized: if the e-mail is not found or the password is wrong.
-    """
     user = _get_user_by_email(data.email, db)
     if not user or not verify_password(data.password, user.hashed_password):
         raise Unauthorized("Invalid email or password")
@@ -76,18 +77,10 @@ def login_user(data: LoginRequest, db: Session) -> TokenResponse:
 
 
 def refresh_access_token(data: RefreshTokenRequest, db: Session) -> TokenResponse:
-    """Issue a new token pair from a valid refresh token.
-
-    Raises:
-        Unauthorized: if the token is invalid, expired, or not a refresh token.
-        NotFound:     if the user encoded in the token no longer exists.
-    """
-    from jose import JWTError
-
     try:
         payload = decode_token(data.refresh_token)
-    except JWTError:
-        raise Unauthorized("Invalid or expired refresh token")
+    except JWTError as exc:
+        raise Unauthorized("Invalid or expired refresh token") from exc
 
     if payload.get("type") != "refresh":
         raise Unauthorized("Token is not a refresh token")
@@ -101,3 +94,89 @@ def refresh_access_token(data: RefreshTokenRequest, db: Session) -> TokenRespons
         raise NotFound("User")
 
     return _build_token_response(user)
+
+
+def request_password_reset(email: str, db: Session) -> MessageResponse:
+    user = _get_user_by_email(email, db)
+    generic_message = MessageResponse(
+        message="If an account with that email exists, a reset code has been sent."
+    )
+    if not user:
+        return generic_message
+
+    otp = _generate_otp()
+    user.password_reset_otp_hash = hash_password(otp)
+    user.password_reset_otp_expiry = datetime.now(timezone.utc) + timedelta(
+        minutes=OTP_EXPIRY_MINUTES
+    )
+    user.password_reset_verified = None
+    db.commit()
+
+    try:
+        send_reset_otp_email(user.email, otp)
+    except Exception as exc:
+        user.password_reset_otp_hash = None
+        user.password_reset_otp_expiry = None
+        user.password_reset_verified = None
+        db.commit()
+        raise RuntimeError(f"Failed to send reset OTP email: {exc}") from exc
+
+    return generic_message
+
+
+def verify_reset_otp(email: str, otp: str, db: Session) -> VerifyOTPResponse:
+    user = _get_user_by_email(email, db)
+    if (
+        user is None
+        or not user.password_reset_otp_hash
+        or user.password_reset_otp_expiry is None
+    ):
+        raise Unauthorized("Invalid or expired OTP")
+
+    if user.password_reset_otp_expiry < datetime.now(timezone.utc):
+        user.password_reset_otp_hash = None
+        user.password_reset_otp_expiry = None
+        user.password_reset_verified = None
+        db.commit()
+        raise Unauthorized("Invalid or expired OTP")
+
+    if not verify_password(otp, user.password_reset_otp_hash):
+        raise Unauthorized("Invalid or expired OTP")
+
+    user.password_reset_verified = datetime.utcnow()
+    db.commit()
+
+    reset_token = create_access_token(
+        {"sub": user.email, "purpose": "password_reset"},
+        expires_delta=timedelta(minutes=RESET_TOKEN_EXPIRY_MINUTES),
+    )
+    return VerifyOTPResponse(
+        message="OTP verified successfully.",
+        reset_token=reset_token,
+    )
+
+
+def reset_password(data: ResetPasswordRequest, db: Session) -> MessageResponse:
+    try:
+        payload = decode_token(data.token)
+    except JWTError as exc:
+        raise Unauthorized("Invalid or expired reset token") from exc
+
+    email = payload.get("sub")
+    if payload.get("purpose") != "password_reset" or email != data.email:
+        raise Unauthorized("Invalid reset token")
+
+    user = _get_user_by_email(data.email, db)
+    if not user:
+        raise NotFound("User")
+
+    if user.password_reset_verified is None:
+        raise Unauthorized("OTP verification required")
+
+    user.hashed_password = hash_password(data.new_password)
+    user.password_reset_otp_hash = None
+    user.password_reset_otp_expiry = None
+    user.password_reset_verified = None
+    db.commit()
+
+    return MessageResponse(message="Password reset successful.")

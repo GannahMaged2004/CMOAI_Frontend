@@ -1,0 +1,1234 @@
+﻿import { useCallback, useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import {
+  Bell,
+  CheckCircle2,
+  ChevronRight,
+  MessageSquareText,
+  Plus,
+  Target,
+  TrendingUp,
+} from "lucide-react";
+import logo from "@/assets/cmo-logo.png";
+
+import { Button } from "../../components/ui/button";
+import { Skeleton } from "../../components/ui/skeleton";
+import { NewCampaignModal } from "../../components/NewCampaignModal";
+import { deleteCampaign } from "../../services/campaignService";
+import { deleteBrand, getBrands} from "../../services/brandService";
+import { useCampaign } from "../../hooks/useCampaign";
+import {
+  getAnalyticsChannels,
+  getAnalyticsOverview,
+} from "../../services/analyticsService";
+import { listAssets } from "../../services/assetsService";
+import { getContentCalendar } from "../../services/contentCalendarService";
+import {
+  generateContent,
+  getContentAgentStatus,
+} from "../../services/contentAgentService";
+import { getDashboardUpcoming } from "../../services/dashboardService";
+import {
+  quickActionBlogPost,
+  quickActionImagePrompt,
+} from "../../services/quickActionsService";
+import type {
+  BrandOut,
+  CampaignOut,
+  ContentAgentPlatform,
+  ContentAgentStatus,
+  ContentAgentType,
+  ContentCalendarMap,
+  TextAgentResponse,
+  ChannelBreakdown,
+} from "../../types/api";
+
+import { agents, nextActions } from "./constants";
+import type { AgentId, ChatMessage, DashboardNotification } from "./types";
+import {
+  buildAgentDemoResponse,
+  formatTextAgentResponse,
+  launchWindowDaysFromStart,
+} from "./utils";
+import { ResultDialog } from "./components/ResultDialog";
+import { MetricCard } from "./components/MetricCard";
+import { CampaignBrief } from "./components/CampaignBrief";
+import { OrchestratorPanel } from "./panels/OrchestratorPanel";
+import { BrandPanels } from "./panels/BrandPanels";
+import { CalendarPanels } from "./panels/CalendarPanels";
+import { TextPanels } from "./panels/TextPanels";
+import { ImagePanels } from "./panels/ImagePanels";
+import { VideoPanels } from "./panels/VideoPanels";
+import { AnalyticsPanels } from "./panels/AnalyticsPanels";
+import { RightPanel } from "./panels/RightPanel";
+
+const getInitialTextChat = (): ChatMessage[] => [
+  {
+    role: "assistant",
+    text: "I can write campaign copy, compare angles, or expand the approved strategy into drafts.",
+  },
+];
+
+const getChatStorageKey = (id: number | null | undefined) =>
+  id ? `cmo-text-chat-${id}` : "cmo-text-chat-empty";
+
+export default function Dashboard() {
+  const navigate = useNavigate();
+
+  const {
+    campaigns,
+    campaign,
+    setCampaignId,
+    isLoading: campaignLoading,
+    error: campaignError,
+    brand,
+    brandAudience,
+    registerNewCampaign,
+  } = useCampaign();
+
+  const [activeAgentId, setActiveAgentId] = useState<AgentId>("orchestrator");
+  const [newCampaignOpen, setNewCampaignOpen] = useState(false);
+  const [modalMode, setModalMode] = useState<"campaign" | "brand">("campaign");
+  const [selectedBrandId, setSelectedBrandId] = useState<number | "all">("all");
+  const [brands, setBrands] = useState<BrandOut[]>([]);
+
+  const [upcoming, setUpcoming] = useState<Awaited<
+    ReturnType<typeof getDashboardUpcoming>
+  > | null>(null);
+  const [upcomingLoading, setUpcomingLoading] = useState(false);
+  const [upcomingError, setUpcomingError] = useState<string | null>(null);
+
+  const [resultOpen, setResultOpen] = useState(false);
+  const [resultTitle, setResultTitle] = useState("");
+  const [resultBody, setResultBody] = useState("");
+
+  const [busyAction, setBusyAction] = useState<string | null>(null);
+  const [agentStatus, setAgentStatus] = useState<ContentAgentStatus | null>(
+    null,
+  );
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+
+  const [textChatMessages, setTextChatMessages] =
+    useState<ChatMessage[]>(getInitialTextChat());
+  const [textLastResult, setTextLastResult] =
+    useState<TextAgentResponse | null>(null);
+  const [textDraft, setTextDraft] = useState("");
+
+  const [calendarData, setCalendarData] = useState<ContentCalendarMap | null>(
+    null,
+  );
+  const [calendarMessage, setCalendarMessage] = useState<string | null>(null);
+  const [channelsView, setChannelsView] = useState<ChannelBreakdown[] | null>(
+    null,
+  );
+  const filteredCampaigns = useMemo(() => {
+    if (selectedBrandId === "all") return campaigns;
+
+    return campaigns.filter((item) => item.brand_id === selectedBrandId);
+  }, [campaigns, selectedBrandId]);
+  const selectedBrand = useMemo(() => {
+    if (selectedBrandId === "all") return null;
+
+    return brands.find((item) => item.id === selectedBrandId) ?? null;
+  }, [brands, selectedBrandId]);
+  const dashboardCampaign =
+    selectedBrandId === "all" || campaign?.brand_id === selectedBrandId
+      ? campaign
+      : null;
+  const dashboardBrand = selectedBrandId === "all" ? brand : selectedBrand;
+  const dashboardBrandAudience =
+    selectedBrandId === "all"
+      ? brandAudience
+      : selectedBrand?.target_audience ?? null;
+  const dashboardCampaignId = dashboardCampaign?.id ?? null;
+  const activeAgent = useMemo(
+    () => agents.find((a) => a.id === activeAgentId) ?? agents[0],
+    [activeAgentId],
+  );
+
+  useEffect(() => {
+    if (selectedBrandId === "all") return;
+    if (campaign?.brand_id === selectedBrandId) return;
+
+    const nextCampaign = filteredCampaigns[0];
+    if (nextCampaign) setCampaignId(nextCampaign.id);
+  }, [campaign?.brand_id, filteredCampaigns, selectedBrandId, setCampaignId]);
+
+  const handleCampaignCreated = useCallback(
+    (createdCampaign: CampaignOut) => {
+      registerNewCampaign(createdCampaign);
+      setSelectedBrandId(createdCampaign.brand_id);
+      void getBrands()
+        .then(setBrands)
+        .catch((error) => console.error(error));
+    },
+    [registerNewCampaign],
+  );
+
+  const handleLogout = () => {
+    localStorage.removeItem("access_token");
+    localStorage.removeItem("cmo-user");
+    navigate("/login");
+  };
+
+  const handleDeleteCampaign = async () => {
+    if (!dashboardCampaign?.id) return;
+
+    const confirmed = window.confirm(
+      `Delete "${dashboardCampaign.name}"? This will also remove its saved chat history.`,
+    );
+
+    if (!confirmed) return;
+
+    await deleteCampaign(dashboardCampaign.id);
+    localStorage.removeItem(getChatStorageKey(dashboardCampaign.id));
+    window.location.reload();
+  };
+
+  const handleDeleteBrand = async () => {
+    if (!dashboardBrand?.id) return;
+
+    const confirmed = window.confirm(
+      `Delete "${dashboardBrand.brand_name}"? Campaigns connected to this brand may be affected.`,
+    );
+
+    if (!confirmed) return;
+
+    await deleteBrand(dashboardBrand.id);
+    window.location.reload();
+  };
+
+  useEffect(() => {
+    setTextLastResult(null);
+
+    if (!dashboardCampaignId) {
+      setTextChatMessages(getInitialTextChat());
+      return;
+    }
+
+    const saved = localStorage.getItem(getChatStorageKey(dashboardCampaignId));
+
+    if (!saved) {
+      setTextChatMessages(getInitialTextChat());
+      return;
+    }
+
+    try {
+      setTextChatMessages(JSON.parse(saved) as ChatMessage[]);
+    } catch {
+      setTextChatMessages(getInitialTextChat());
+    }
+  }, [dashboardCampaignId]);
+
+  useEffect(() => {
+    if (!dashboardCampaignId) return;
+
+    localStorage.setItem(
+      getChatStorageKey(dashboardCampaignId),
+      JSON.stringify(textChatMessages),
+    );
+  }, [dashboardCampaignId, textChatMessages]);
+
+  useEffect(() => {
+    if (!dashboardCampaignId) {
+      setUpcoming(null);
+      return;
+    }
+
+    setUpcomingLoading(true);
+    setUpcomingError(null);
+
+    void getDashboardUpcoming()
+      .then(setUpcoming)
+      .catch((e) => {
+        setUpcomingError(
+          e instanceof Error ? e.message : "Something went wrong",
+        );
+        setUpcoming(null);
+      })
+      .finally(() => setUpcomingLoading(false));
+  }, [dashboardCampaignId]);
+
+  useEffect(() => {
+    void getBrands()
+      .then(setBrands)
+      .catch((error) => console.error(error));
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    void getContentAgentStatus()
+      .then((status) => {
+        if (!cancelled) setAgentStatus(status);
+      })
+      .catch(() => {
+        if (!cancelled) setAgentStatus(null);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const showResult = useCallback((title: string, body: string) => {
+    setResultTitle(title);
+    setResultBody(body);
+    setResultOpen(true);
+  }, []);
+
+  const readinessDisplay = dashboardCampaign ? "72%" : "N/A";
+  const projectedLiftDisplay =
+    dashboardCampaign?.status === "Completed"
+      ? "+18%"
+      : dashboardCampaign
+        ? "+12%"
+        : "N/A";
+
+  const contentQueueDisplay = useMemo(() => {
+    if (upcomingLoading) return "...";
+    if (upcomingError) return "-";
+    if (!upcoming) return "-";
+    return String(upcoming.length);
+  }, [upcoming, upcomingLoading, upcomingError]);
+
+  const launchWindowDisplay = useMemo(() => {
+    if (!dashboardCampaign?.start_date) return "--";
+    return launchWindowDaysFromStart(dashboardCampaign.start_date);
+  }, [dashboardCampaign?.start_date]);
+
+  const notifications = useMemo<DashboardNotification[]>(
+    (() => {
+      const items: DashboardNotification[] = [];
+
+      if (agentStatus) {
+        items.push(
+          agentStatus.mode === "live"
+            ? {
+                id: "ai-live",
+                title: "Text agent is live",
+                detail: `Connected to ${agentStatus.provider} for real AI copy generation.`,
+                tone: "success",
+                actionLabel: "Open Text",
+                actionType: "text",
+              }
+            : {
+                id: "ai-fallback",
+                title: "AI fallback mode",
+                detail:
+                  "The text agent is using fallback output. Check your AI key before the demo.",
+                tone: "warn",
+                actionLabel: "Open Text",
+                actionType: "text",
+              },
+        );
+      }
+
+      if (!campaigns.length) {
+        items.push({
+          id: "campaign-empty",
+          title: "No campaign yet",
+          detail: "Create your first campaign to unlock the agent workspace.",
+          tone: "warn",
+          actionLabel: "New campaign",
+          actionType: "new-campaign",
+        });
+      } else if (dashboardCampaign && !dashboardCampaign.strategy_id) {
+        items.push({
+          id: "strategy-missing",
+          title: "Strategy still missing",
+          detail:
+            "Calendar planning will stay limited until this campaign has a linked strategy.",
+          tone: "info",
+          actionLabel: "Open Calendar",
+          actionType: "calendar",
+        });
+      }
+
+      if (dashboardCampaign && !dashboardBrand) {
+        items.push({
+          id: "brand-missing",
+          title: "Brand details need attention",
+          detail:
+            "Your campaign exists, but the brand context has not loaded cleanly yet.",
+          tone: "warn",
+          actionLabel: "Open Brand",
+          actionType: "brand",
+        });
+      } else if (dashboardBrand) {
+        items.push({
+          id: "brand-ready",
+          title: `${dashboardBrand.brand_name} is active`,
+          detail:
+            dashboardBrand.target_audience?.trim() ||
+            "Add audience details to make the suggestions feel more tailored.",
+          tone: "info",
+          actionLabel: "Open Brand",
+          actionType: "brand",
+        });
+      }
+
+      if (upcomingError) {
+        items.push({
+          id: "queue-error",
+          title: "Content queue needs a check",
+          detail: upcomingError,
+          tone: "warn",
+          actionLabel: "Open Calendar",
+          actionType: "calendar",
+        });
+      } else if (upcoming?.length) {
+        items.push({
+          id: "queue-ready",
+          title: `${upcoming.length} items in the queue`,
+          detail: "Your upcoming content is loaded and ready to review.",
+          tone: "success",
+          actionLabel: "Open Calendar",
+          actionType: "calendar",
+        });
+      }
+
+      return items;
+    }) as () => DashboardNotification[],
+    [
+      agentStatus,
+      dashboardBrand,
+      dashboardCampaign,
+      campaigns.length,
+      upcoming,
+      upcomingError,
+    ],
+  );
+
+  const handleNotificationAction = useCallback(
+    (actionType?: DashboardNotification["actionType"]) => {
+      if (!actionType) return;
+
+      if (actionType === "new-campaign") {
+        setModalMode("campaign");
+        setNewCampaignOpen(true);
+      }
+
+      if (actionType === "brand") setActiveAgentId("brand");
+      if (actionType === "calendar") setActiveAgentId("calendar");
+      if (actionType === "text") setActiveAgentId("text");
+
+      setNotificationsOpen(false);
+    },
+    [],
+  );
+
+  const handleCalendarGenerate14 = useCallback(async () => {
+    if (!dashboardCampaign?.strategy_id) {
+      setCalendarMessage("No strategy linked to this campaign yet");
+      setCalendarData(null);
+      return;
+    }
+
+    setBusyAction("cal14");
+    setCalendarMessage(null);
+
+    try {
+      const now = new Date();
+      const data = await getContentCalendar({
+        strategy_id: dashboardCampaign.strategy_id,
+        month: now.getMonth() + 1,
+        year: now.getFullYear(),
+      });
+
+      setCalendarData(data);
+      setChannelsView(null);
+    } catch (e) {
+      setCalendarMessage(
+        e instanceof Error ? e.message : "Something went wrong",
+      );
+      setCalendarData(null);
+    } finally {
+      setBusyAction(null);
+    }
+  }, [dashboardCampaign]);
+
+  const handleCalendarBalance = useCallback(async () => {
+    setBusyAction("channels");
+    setCalendarMessage(null);
+
+    try {
+      const rows = await getAnalyticsChannels();
+      setChannelsView(rows);
+      setCalendarData(null);
+    } catch (e) {
+      setCalendarMessage(
+        e instanceof Error ? e.message : "Something went wrong",
+      );
+      setChannelsView(null);
+    } finally {
+      setBusyAction(null);
+    }
+  }, []);
+
+  const runTextGenerate = useCallback(
+    async (
+      message: string,
+      content_type: ContentAgentType,
+      platform: ContentAgentPlatform | null,
+      busyKey: string,
+    ) => {
+      if (!dashboardCampaign) return;
+
+      setBusyAction(busyKey);
+      setTextChatMessages((prev) => [...prev, { role: "user", text: message }]);
+
+      try {
+        const res = await generateContent({
+          message,
+          campaign_id: dashboardCampaign.id,
+          content_type,
+          platform: platform ?? undefined,
+        });
+
+        setTextLastResult(res);
+
+        const formatted = formatTextAgentResponse(res);
+
+        setTextChatMessages((prev) => [
+          ...prev,
+          { role: "assistant", text: formatted },
+        ]);
+
+        showResult("Generated content", formatted);
+      } catch (e) {
+        const err = e instanceof Error ? e.message : "Something went wrong";
+
+        setTextChatMessages((prev) => [
+          ...prev,
+          { role: "assistant", text: err },
+        ]);
+
+        showResult("Error", err);
+      } finally {
+        setBusyAction(null);
+      }
+    },
+    [dashboardCampaign, showResult],
+  );
+
+  const handleTextLinkedIn = useCallback(() => {
+    if (!dashboardCampaign) return;
+
+    void runTextGenerate(
+      `Write a LinkedIn post for ${dashboardCampaign.name}`,
+      "social_media_post",
+      "linkedin",
+      "li",
+    );
+  }, [dashboardCampaign, runTextGenerate]);
+
+  const handleTextEmail = useCallback(() => {
+    if (!dashboardCampaign) return;
+
+    void runTextGenerate(
+      `Draft an email sequence for ${dashboardCampaign.name}`,
+      "email_campaign",
+      "email",
+      "email",
+    );
+  }, [dashboardCampaign, runTextGenerate]);
+
+  const handleTextHooks = useCallback(() => {
+    if (!dashboardCampaign) return;
+
+    void runTextGenerate(
+      `Create ad hook directions for ${dashboardCampaign.name}`,
+      "promotional_message",
+      "linkedin",
+      "hooks",
+    );
+  }, [dashboardCampaign, runTextGenerate]);
+
+  const handleTextChatSend = useCallback(
+    (message = textDraft) => {
+      const trimmed = message.trim();
+      if (!trimmed || !dashboardCampaign) return;
+
+      setTextDraft("");
+
+      void runTextGenerate(
+        trimmed,
+        "social_media_post",
+        "instagram",
+        "textchat",
+      );
+    },
+    [textDraft, dashboardCampaign, runTextGenerate],
+  );
+
+  const handleImagePrompt = useCallback(async () => {
+    if (!dashboardCampaign) return;
+
+    setBusyAction("imgp");
+
+    try {
+      const res = await quickActionImagePrompt({
+        prompt: `Campaign visual for ${dashboardCampaign.name}`,
+        brand_id: dashboardCampaign.brand_id,
+      });
+
+      showResult("Image prompt", res.result);
+    } catch (e) {
+      showResult(
+        "Error",
+        e instanceof Error ? e.message : "Something went wrong",
+      );
+    } finally {
+      setBusyAction(null);
+    }
+  }, [dashboardCampaign, showResult]);
+
+  const handleImageAssets = useCallback(async () => {
+    if (!dashboardCampaign) return;
+
+    setBusyAction("assets");
+
+    try {
+      const list = await listAssets({ campaign_id: dashboardCampaign.id });
+
+      const text =
+        list.length === 0
+          ? "No assets found for this campaign."
+          : list
+              .map(
+                (a) =>
+                  `* ${a.name} (${a.asset_type}) - ${a.url.slice(0, 80)}${
+                    a.url.length > 80 ? "..." : ""
+                  }`,
+              )
+              .join("\n");
+
+      showResult("Campaign assets", text);
+    } catch (e) {
+      showResult(
+        "Error",
+        e instanceof Error ? e.message : "Something went wrong",
+      );
+    } finally {
+      setBusyAction(null);
+    }
+  }, [dashboardCampaign, showResult]);
+
+  const handleVideoScript = useCallback(async () => {
+    if (!dashboardCampaign) return;
+
+    setBusyAction("vscript");
+
+    try {
+      const res = await quickActionBlogPost({
+        topic: `30-second video script for ${dashboardCampaign.name}`,
+        brand_id: dashboardCampaign.brand_id,
+      });
+
+      showResult("Video script", res.result);
+    } catch (e) {
+      showResult(
+        "Error",
+        e instanceof Error ? e.message : "Something went wrong",
+      );
+    } finally {
+      setBusyAction(null);
+    }
+  }, [dashboardCampaign, showResult]);
+
+  const handleVideoCreatorBrief = useCallback(async () => {
+    if (!dashboardCampaign) return;
+
+    setBusyAction("vbrief");
+
+    try {
+      const res = await quickActionBlogPost({
+        topic: `Creator brief for ${dashboardCampaign.name}`,
+        brand_id: dashboardCampaign.brand_id,
+      });
+
+      showResult("Creator brief", res.result);
+    } catch (e) {
+      showResult(
+        "Error",
+        e instanceof Error ? e.message : "Something went wrong",
+      );
+    } finally {
+      setBusyAction(null);
+    }
+  }, [dashboardCampaign, showResult]);
+
+  const handleAnalyticsSummarize = useCallback(async () => {
+    setBusyAction("asum");
+
+    try {
+      const o = await getAnalyticsOverview();
+
+      const body = [
+        `Total Reach: ${o.total_reach}`,
+        `Engagement Rate: ${o.avg_engagement_rate}%`,
+        `Clicks: ${o.total_clicks}`,
+        `Conversions: ${o.total_conversions}`,
+        `Impressions: ${o.total_impressions}`,
+      ].join("\n");
+
+      showResult("Performance summary", body);
+    } catch (e) {
+      showResult(
+        "Error",
+        e instanceof Error ? e.message : "Something went wrong",
+      );
+    } finally {
+      setBusyAction(null);
+    }
+  }, [showResult]);
+
+  const handleDemoAgentAction = useCallback(
+    (agentId: AgentId, action: string) => {
+      const agentName =
+        agents.find((agent) => agent.id === agentId)?.name ?? "Agent";
+
+      showResult(
+        `${agentName}: ${action}`,
+        buildAgentDemoResponse(
+          agentId,
+          action,
+          dashboardCampaign,
+          dashboardBrandAudience,
+        ),
+      );
+    },
+    [dashboardBrandAudience, dashboardCampaign, showResult],
+  );
+
+  if (campaignLoading && !dashboardCampaign && campaigns.length === 0) {
+    return (
+      <div className="min-h-screen bg-[radial-gradient(circle_at_top_right,rgba(129,69,255,0.18),transparent_28%),radial-gradient(circle_at_bottom_left,rgba(73,34,151,0.22),transparent_34%),linear-gradient(180deg,#0a0a14_0%,#080910_100%)] p-8 text-white">
+        <div className="max-w-lg mx-auto space-y-3">
+          <Skeleton className="w-full h-10 bg-white/10" />
+          <Skeleton className="w-full h-32 bg-white/10" />
+          <Skeleton className="w-full h-48 bg-white/10" />
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top_right,rgba(129,69,255,0.18),transparent_28%),radial-gradient(circle_at_bottom_left,rgba(73,34,151,0.22),transparent_34%),linear-gradient(180deg,#0a0a14_0%,#080910_100%)] text-white">
+      <ResultDialog
+        open={resultOpen}
+        title={resultTitle}
+        body={resultBody}
+        onOpenChange={setResultOpen}
+      />
+
+      <NewCampaignModal
+        open={newCampaignOpen}
+        mode={modalMode}
+        onOpenChange={setNewCampaignOpen}
+        onCreated={handleCampaignCreated}
+      />
+
+      <div className="flex min-h-screen">
+        <aside className="hidden w-72 shrink-0 border-r border-white/10 bg-[rgba(9,11,24,0.88)] px-4 py-5 backdrop-blur-xl lg:block">
+          <div className="px-2 mb-8 space-y-3">
+            <button
+              type="button"
+              onClick={() => navigate("/landing")}
+              className="transition hover:opacity-90"
+            >
+              <img
+                src={logo}
+                alt="CMO.ai"
+                className="h-12 w-auto drop-shadow-[0_16px_32px_rgba(97,66,220,0.35)]"
+              />
+            </button>
+
+            <div>
+              <p className="text-sm font-semibold text-white/90">
+                Operations workspace
+              </p>
+              <p className="text-xs text-white/50">
+                Campaign orchestration and agent control
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="w-full px-4 py-3 mt-4 text-sm font-semibold text-red-200 transition border rounded-2xl border-red-400/20 bg-red-500/10 hover:bg-red-500/20 hover:text-white"
+            >
+              Logout
+            </button>
+          </div>
+
+          <div className="space-y-2">
+            {agents.map((agent) => {
+              const Icon = agent.icon;
+              const isActive = agent.id === activeAgentId;
+
+              return (
+                <button
+                  key={agent.id}
+                  type="button"
+                  onClick={() => setActiveAgentId(agent.id)}
+                  className={`flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left transition ${
+                    isActive
+                      ? "border border-white/10 bg-[linear-gradient(180deg,rgba(151,111,255,0.92),rgba(86,48,204,0.92))] text-white shadow-[0_18px_35px_rgba(65,34,153,0.32)]"
+                      : "text-white/70 hover:bg-white/10 hover:text-white"
+                  }`}
+                >
+                  <Icon
+                    className={`size-5 shrink-0 ${
+                      isActive ? "text-cosmic" : agent.accent
+                    }`}
+                  />
+
+                  <span className="flex-1 min-w-0">
+                    <span className="block text-sm font-medium truncate">
+                      {agent.shortName}
+                    </span>
+                    <span
+                      className={`block truncate text-xs ${
+                        isActive ? "text-cosmic/60" : "text-white/40"
+                      }`}
+                    >
+                      {agent.navSubtitle}
+                    </span>
+                  </span>
+
+                  <ChevronRight className="opacity-50 size-4 shrink-0" />
+                </button>
+              );
+            })}
+          </div>
+        </aside>
+
+        <main className="flex-1 min-w-0">
+          <header className="border-b border-white/10 bg-[rgba(12,14,30,0.82)] px-4 py-5 backdrop-blur-xl md:px-6">
+            <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+              <div className="min-w-0">
+                <p className="text-xs uppercase tracking-[0.18em] text-white/40">
+                  Dashboard
+                </p>
+
+                <div className="flex flex-wrap items-center gap-3 mt-2">
+                  <h1 className="text-2xl font-semibold tracking-tight text-white">
+                    Campaign overview
+                  </h1>
+
+                  {agentStatus ? (
+                    <div
+                      className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-medium ${
+                        agentStatus.mode === "live"
+                          ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-200"
+                          : "border-amber-400/30 bg-amber-400/10 text-amber-200"
+                      }`}
+                    >
+                      <span className="bg-current rounded-full size-2" />
+                      {agentStatus.mode === "live"
+                        ? `AI live on ${agentStatus.provider}`
+                        : "AI fallback mode"}
+                    </div>
+                  ) : null}
+                </div>
+
+                <div className="flex flex-col gap-3 mt-2 md:flex-row md:items-center md:flex-wrap">
+                  <select
+                    aria-label="Active brand"
+                    value={selectedBrandId}
+                    onChange={(event) => {
+                      const value = event.target.value;
+
+                      if (value === "all") {
+                        setSelectedBrandId("all");
+                        return;
+                      }
+
+                      setSelectedBrandId(Number(value));
+                    }}
+                    className="w-full px-3 text-sm font-semibold bg-white border outline-none h-11 rounded-2xl border-white/10 text-cosmic md:w-72"
+                  >
+                    <option value="all">All brands</option>
+
+                    {brands.map((item) => (
+                      <option key={item.id} value={item.id}>
+                        {item.brand_name}
+                      </option>
+                    ))}
+                  </select>
+
+                  <select
+                    aria-label="Active campaign"
+                    value={dashboardCampaign?.id ?? ""}
+                    onChange={(event) => {
+                      const v = event.target.value;
+                      if (v) setCampaignId(Number.parseInt(v, 10));
+                    }}
+                    disabled={!filteredCampaigns.length}
+                    className="w-full px-3 text-sm font-semibold bg-white border outline-none h-11 rounded-2xl border-white/10 text-cosmic md:w-72 disabled:opacity-50"
+                  >
+                    {!filteredCampaigns.length ? (
+                      <option value="">No campaigns</option>
+                    ) : (
+                      filteredCampaigns.map((item) => (
+                        <option key={item.id} value={item.id}>
+                          {item.name}
+                        </option>
+                      ))
+                    )}
+                  </select>
+
+                  <Button
+                    type="button"
+                    className="h-11 rounded-2xl bg-[linear-gradient(90deg,#7b61ff,#42d6ff)] px-4 text-cosmic shadow-[0_16px_30px_rgba(73,125,255,0.25)] hover:opacity-95"
+                    onClick={() => {
+                      setModalMode("campaign");
+                      setNewCampaignOpen(true);
+                    }}
+                  >
+                    <Plus className="size-4" />
+                    New Campaign
+                  </Button>
+
+                  <Button
+                    type="button"
+                    className="px-4 text-white border h-11 rounded-2xl border-white/10 bg-white/10 hover:bg-white/15"
+                    onClick={() => {
+                      setModalMode("brand");
+                      setNewCampaignOpen(true);
+                    }}
+                  >
+                    <Plus className="size-4" />
+                    New Brand
+                  </Button>
+
+                  {dashboardBrand ? (
+                    <Button
+                      type="button"
+                      className="px-4 text-red-200 h-11 rounded-2xl bg-red-500/10 hover:bg-red-500/20"
+                      onClick={() => void handleDeleteBrand()}
+                    >
+                      Delete Brand
+                    </Button>
+                  ) : null}
+
+                  {dashboardCampaign ? (
+                    <Button
+                      type="button"
+                      className="px-4 text-red-200 h-11 rounded-2xl bg-red-500/10 hover:bg-red-500/20"
+                      onClick={() => void handleDeleteCampaign()}
+                    >
+                      Delete Campaign
+                    </Button>
+                  ) : null}
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-3 xl:items-end">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                  <div className="hidden min-w-[220px] items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.06] px-3 py-2 text-left shadow-[0_12px_30px_rgba(11,13,30,0.25)] md:flex">
+                    <div className="flex items-center justify-center overflow-hidden border h-11 w-11 shrink-0 rounded-xl border-white/10 bg-white/10">
+                      <img
+                        src={dashboardBrand?.logo_url || logo}
+                        alt={
+                          dashboardBrand?.brand_name
+                            ? `${dashboardBrand.brand_name} logo`
+                            : "Brand logo"
+                        }
+                        className="object-contain w-full h-full p-1"
+                      />
+                    </div>
+
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-white truncate">
+                        {dashboardBrand?.brand_name ?? "CMO.ai"}
+                      </p>
+                      <p className="text-xs truncate text-white/50">
+                        {dashboardCampaign?.name ?? "No active campaign"}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setNotificationsOpen((open) => !open)}
+                      className="flex h-12 items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.06] px-4 text-sm font-medium text-white shadow-[0_12px_30px_rgba(11,13,30,0.25)] transition hover:bg-white/[0.1]"
+                    >
+                      <span className="relative inline-flex">
+                        <Bell className="size-4" />
+                        {notifications.length ? (
+                          <span className="absolute -right-1.5 -top-1.5 inline-flex min-h-4 min-w-4 items-center justify-center rounded-full bg-neonPink px-1 text-[10px] font-semibold text-white">
+                            {notifications.length}
+                          </span>
+                        ) : null}
+                      </span>
+                      Notifications
+                    </button>
+
+                    {notificationsOpen ? (
+                      <div className="absolute right-0 top-14 z-30 w-[min(92vw,360px)] rounded-2xl border border-white/10 bg-[rgba(13,16,30,0.98)] p-3 shadow-[0_24px_60px_rgba(6,8,18,0.55)] backdrop-blur-xl">
+                        <div className="flex items-center justify-between px-1 mb-2">
+                          <div>
+                            <p className="text-sm font-semibold text-white">
+                              Notifications
+                            </p>
+                            <p className="text-xs text-white/45">
+                              Live setup and campaign signals
+                            </p>
+                          </div>
+
+                          <span className="rounded-full border border-white/10 bg-white/5 px-2 py-1 text-[11px] text-white/60">
+                            {notifications.length} items
+                          </span>
+                        </div>
+
+                        <div className="space-y-2">
+                          {notifications.length ? (
+                            notifications.map((item) => (
+                              <div
+                                key={item.id}
+                                className="rounded-2xl border border-white/10 bg-white/[0.05] p-3"
+                              >
+                                <div className="flex items-start gap-3">
+                                  <span
+                                    className={`mt-1 size-2.5 shrink-0 rounded-full ${
+                                      item.tone === "success"
+                                        ? "bg-emerald-300"
+                                        : item.tone === "warn"
+                                          ? "bg-amber-300"
+                                          : "bg-sky-300"
+                                    }`}
+                                  />
+
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-medium text-white">
+                                      {item.title}
+                                    </p>
+
+                                    <p className="mt-1 text-xs leading-5 text-white/60">
+                                      {item.detail}
+                                    </p>
+
+                                    {item.actionLabel ? (
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          handleNotificationAction(
+                                            item.actionType,
+                                          )
+                                        }
+                                        className="mt-3 text-xs font-semibold transition text-cyan-200 hover:text-white"
+                                      >
+                                        {item.actionLabel}
+                                      </button>
+                                    ) : null}
+                                  </div>
+                                </div>
+                              </div>
+                            ))
+                          ) : (
+                            <div className="rounded-2xl border border-white/10 bg-white/[0.05] p-4 text-sm text-white/60">
+                              No notifications right now.
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+                  <MetricCard
+                    label="Readiness"
+                    value={readinessDisplay}
+                    icon={CheckCircle2}
+                  />
+                  <MetricCard
+                    label="Content Queue"
+                    value={contentQueueDisplay}
+                    icon={MessageSquareText}
+                  />
+                  <MetricCard
+                    label="Launch Window"
+                    value={launchWindowDisplay}
+                    icon={Target}
+                  />
+                  <MetricCard
+                    label="Projected Lift"
+                    value={projectedLiftDisplay}
+                    icon={TrendingUp}
+                  />
+                </div>
+              </div>
+            </div>
+          </header>
+
+          {campaignError ? (
+            <div className="px-4 py-3 text-sm text-red-200 border-b border-red-500/40 bg-red-500/10 md:px-6">
+              {campaignError}
+            </div>
+          ) : null}
+
+          <div className="grid min-h-[calc(100vh-96px)] grid-cols-1 xl:grid-cols-[minmax(0,1fr)_380px]">
+            <section className="min-w-0 px-4 py-5 md:px-6">
+              <div className="grid gap-3 mb-5 lg:hidden">
+                <select
+                  aria-label="Active agent workspace"
+                  value={activeAgentId}
+                  onChange={(event) =>
+                    setActiveAgentId(event.target.value as AgentId)
+                  }
+                  className="w-full px-3 text-sm font-semibold bg-white border rounded-md outline-none h-11 border-white/10 text-cosmic"
+                >
+                  {agents.map((agent) => (
+                    <option key={agent.id} value={agent.id}>
+                      {agent.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {!dashboardCampaign && !campaignLoading ? (
+                <div className="rounded-md border border-white/10 bg-white/[0.04] p-8 text-center text-white/70">
+                  <p className="text-lg font-medium text-white">
+                    {selectedBrandId === "all"
+                      ? "No campaigns yet"
+                      : "No campaigns for this brand"}
+                  </p>
+
+                  <p className="mt-2 text-sm">
+                    {selectedBrandId === "all"
+                      ? "Create a campaign to populate this workspace."
+                      : "Create a campaign for the selected brand to populate this workspace."}
+                  </p>
+
+                  <Button
+                    type="button"
+                    className="mt-4 bg-neonBlue text-cosmic hover:bg-neonBlue/90"
+                    onClick={() => {
+                      setModalMode("campaign");
+                      setNewCampaignOpen(true);
+                    }}
+                  >
+                    <Plus className="size-4" />
+                    New Campaign
+                  </Button>
+                </div>
+              ) : dashboardCampaign ? (
+                <>
+                  <CampaignBrief campaign={dashboardCampaign} />
+
+                  {activeAgentId === "orchestrator" ? (
+                    <OrchestratorPanel
+                      campaign={dashboardCampaign}
+                      brandAudience={dashboardBrandAudience}
+                      onPickAgent={setActiveAgentId}
+                      onDemoAction={handleDemoAgentAction}
+                    />
+                  ) : activeAgentId === "brand" ? (
+                    <BrandPanels
+                      campaign={dashboardCampaign}
+                      brandAudience={dashboardBrandAudience}
+                      onDemoAction={handleDemoAgentAction}
+                    />
+                  ) : activeAgentId === "calendar" ? (
+                    <CalendarPanels
+                      calendarData={calendarData}
+                      calendarMessage={calendarMessage}
+                      channelsView={channelsView}
+                      busyAction={busyAction}
+                      onGenerate14={handleCalendarGenerate14}
+                      onBalance={handleCalendarBalance}
+                      onFindGaps={() =>
+                        handleDemoAgentAction("calendar", "Find calendar gaps")
+                      }
+                    />
+                  ) : activeAgentId === "text" ? (
+                    <TextPanels
+                      agentStatus={agentStatus}
+                      busyAction={busyAction}
+                      lastResult={textLastResult}
+                      messages={textChatMessages}
+                      onLinkedIn={handleTextLinkedIn}
+                      onEmail={handleTextEmail}
+                      onHooks={handleTextHooks}
+                    />
+                  ) : activeAgentId === "image" ? (
+                    <ImagePanels
+                      busyAction={busyAction}
+                      onPrompt={handleImagePrompt}
+                      onAssets={handleImageAssets}
+                      onReview={() =>
+                        handleDemoAgentAction(
+                          "image",
+                          "Review visual consistency",
+                        )
+                      }
+                    />
+                  ) : activeAgentId === "video" ? (
+                    <VideoPanels
+                      busyAction={busyAction}
+                      onScript={handleVideoScript}
+                      onStoryboard={() =>
+                        handleDemoAgentAction("video", "Create storyboard")
+                      }
+                      onCreatorBrief={handleVideoCreatorBrief}
+                    />
+                  ) : (
+                    <AnalyticsPanels
+                      busyAction={busyAction}
+                      onSummarize={handleAnalyticsSummarize}
+                      onWeakFunnel={() =>
+                        handleDemoAgentAction(
+                          "analytics",
+                          "Find weak funnel step",
+                        )
+                      }
+                      onBudgetShift={() =>
+                        handleDemoAgentAction(
+                          "analytics",
+                          "Suggest budget shift",
+                        )
+                      }
+                    />
+                  )}
+                </>
+              ) : (
+                <div className="py-6 space-y-3">
+                  <Skeleton className="w-full h-24 bg-white/10" />
+                  <Skeleton className="w-full h-48 bg-white/10" />
+                </div>
+              )}
+            </section>
+
+            <RightPanel
+              activeAgent={activeAgent}
+              campaign={dashboardCampaign}
+              brand={dashboardBrand}
+              brandAudience={dashboardBrandAudience}
+              nextActions={nextActions[activeAgentId]}
+              onDemoAction={handleDemoAgentAction}
+              onCalendar14={handleCalendarGenerate14}
+              onCalendarBalance={handleCalendarBalance}
+              onTextLi={handleTextLinkedIn}
+              onTextEmail={handleTextEmail}
+              onTextHooks={handleTextHooks}
+              textChatMessages={textChatMessages}
+              textDraft={textDraft}
+              onTextDraftChange={setTextDraft}
+              onTextChatSend={handleTextChatSend}
+              onImgPrompt={handleImagePrompt}
+              onImgAssets={handleImageAssets}
+              onVideoScript={handleVideoScript}
+              onVideoBrief={handleVideoCreatorBrief}
+              busyAction={busyAction}
+            />
+          </div>
+        </main>
+      </div>
+    </div>
+  );
+}

@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 
 
 class LoginRequest(BaseModel):
@@ -9,7 +9,7 @@ class LoginRequest(BaseModel):
 class RegisterRequest(BaseModel):
     name: str
     email: EmailStr
-    password: str
+    password: str = Field(min_length=8)
 
 
 class RefreshTokenRequest(BaseModel):
@@ -20,9 +20,25 @@ class ForgotPasswordRequest(BaseModel):
     email: EmailStr
 
 
+class VerifyOTPRequest(BaseModel):
+    email: EmailStr
+    otp: str = Field(
+        ...,
+        min_length=6,
+        max_length=6,
+        pattern=r"^\d{6}$",
+    )
+
+
 class ResetPasswordRequest(BaseModel):
+    email: EmailStr
     token: str
-    new_password: str
+    new_password: str = Field(min_length=8)
+
+
+class VerifyOTPResponse(BaseModel):
+    message: str
+    reset_token: str
 
 
 class TokenResponse(BaseModel):

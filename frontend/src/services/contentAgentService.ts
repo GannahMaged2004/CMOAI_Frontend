@@ -1,5 +1,15 @@
 import { request } from "../lib/api";
-import type { TextAgentRequest, TextAgentResponse } from "../types/api";
+import type {
+  ContentAgentStatus,
+  TextAgentRequest,
+  TextAgentResponse,
+} from "../types/api";
+
+export async function getContentAgentStatus(): Promise<ContentAgentStatus> {
+  return request<ContentAgentStatus>("/agents/content/status", {
+    method: "GET",
+  });
+}
 
 export async function generateContent(
   data: TextAgentRequest

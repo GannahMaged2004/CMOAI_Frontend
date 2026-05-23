@@ -40,7 +40,11 @@ export default function Navigation() {
       <div className="bg-black/50 backdrop-blur-md">
         <div className="flex items-center justify-between px-6 py-4 mx-auto max-w-7xl">
           <Link to="/" className="flex items-center gap-3">
-            <img src={logo} alt="CMO.AI Logo" className="h-12" />
+            <img
+              src={logo}
+              alt="CMO.AI Logo"
+              className="h-12 w-auto drop-shadow-[0_12px_28px_rgba(90,70,210,0.35)]"
+            />
           </Link>
 
           <nav className="items-center hidden gap-8 text-sm font-medium text-white md:flex">
