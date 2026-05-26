@@ -7,7 +7,9 @@ import type { Agent, AgentId, ChatMessage } from "../types";
 import { buildAgentSuggestions, getAgentDemoIntro } from "../utils";
 import { SuggestionList } from "../components/SuggestionList";
 import { TextRightAside } from "./TextRightAside";
+import { ImageRightAside } from "./ImageRightAside";
 import { AnalyticsRightAside } from "./AnalyticsRightAside";
+import type { ImageAgentResponse } from "../../../types/api";
 
 export function RightPanel({
   activeAgent,
@@ -25,7 +27,12 @@ export function RightPanel({
   textDraft,
   onTextDraftChange,
   onTextChatSend,
-  onImgPrompt,
+  imageChatMessages,
+  imageLastResult,
+  imageDraft,
+  onImageDraftChange,
+  onImageChatSend,
+  onImgGenerateVisual,
   onImgAssets,
   onVideoScript,
   onVideoBrief,
@@ -46,7 +53,12 @@ export function RightPanel({
   textDraft: string;
   onTextDraftChange: (v: string) => void;
   onTextChatSend: (message?: string) => void;
-  onImgPrompt: () => void;
+  imageChatMessages: ChatMessage[];
+  imageLastResult: ImageAgentResponse | null;
+  imageDraft: string;
+  onImageDraftChange: (v: string) => void;
+  onImageChatSend: (message?: string) => void;
+  onImgGenerateVisual: () => void;
   onImgAssets: () => void;
   onVideoScript: () => void;
   onVideoBrief: () => void;
@@ -84,14 +96,14 @@ export function RightPanel({
     }
     if (activeAgent.id === "image") {
       if (action === "Create image prompts") {
-        void onImgPrompt();
+        void onImgGenerateVisual();
         return;
       }
       if (action === "Draft asset briefs") {
         void onImgAssets();
         return;
       }
-      onDemoAction("image", action);
+      onImageChatSend(action);
       return;
     }
     if (activeAgent.id === "video") {
@@ -256,6 +268,24 @@ export function RightPanel({
     );
   }
 
+  if (activeAgent.id === "image") {
+    return (
+      <ImageRightAside
+        activeAgent={activeAgent}
+        campaignName={campaign?.name ?? "-"}
+        messages={imageChatMessages}
+        lastResult={imageLastResult}
+        draft={imageDraft}
+        onDraftChange={onImageDraftChange}
+        onSend={onImageChatSend}
+        suggestions={suggestions}
+        onGenerateVisual={onImgGenerateVisual}
+        onListAssets={onImgAssets}
+        busyAction={busyAction}
+      />
+    );
+  }
+
   if (activeAgent.id === "text") {
     return (
       <TextRightAside
@@ -287,11 +317,6 @@ export function RightPanel({
       if (label === "Balance channels") void onCalendarBalance();
       if (label === "Find calendar gaps") onDemoAction("calendar", label);
     }
-    if (activeAgent.id === "image") {
-      if (label === "Create image prompts") void onImgPrompt();
-      if (label === "Draft asset briefs") void onImgAssets();
-      if (label === "Review visual consistency") onDemoAction("image", label);
-    }
     if (activeAgent.id === "video") {
       if (label === "Write short video script") void onVideoScript();
       if (label === "Create storyboard") onDemoAction("video", label);
@@ -305,7 +330,7 @@ export function RightPanel({
     if (label === "Write LinkedIn posts") return busyAction === "li";
     if (label === "Draft email sequence") return busyAction === "email";
     if (label === "Create ad hooks") return busyAction === "hooks";
-    if (label === "Create image prompts") return busyAction === "imgp";
+    if (label === "Create image prompts") return busyAction === "imggen";
     if (label === "Draft asset briefs") return busyAction === "assets";
     if (label === "Write short video script") return busyAction === "vscript";
     if (label === "Plan creator brief") return busyAction === "vbrief";

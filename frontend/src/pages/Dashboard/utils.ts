@@ -2,6 +2,7 @@ import type {
   BrandOut,
   CampaignOut,
   CampaignStatusApi,
+  ImageAgentResponse,
   TextAgentResponse,
 } from "../../types/api";
 import type { AgentId, AgentSuggestion } from "./types";
@@ -403,4 +404,32 @@ export function formatTextAgentResponse(res: TextAgentResponse): string {
     );
   }
   return parts.join("\n");
+}
+
+/** Served by FastAPI StaticFiles; proxied in Vite dev via /uploads. */
+export function resolveUploadUrl(imageUrl: string): string {
+  if (imageUrl.startsWith("http://") || imageUrl.startsWith("https://")) {
+    return imageUrl;
+  }
+  return imageUrl.startsWith("/") ? imageUrl : `/${imageUrl}`;
+}
+
+export function formatImageAgentResponse(res: ImageAgentResponse): string {
+  const lines = [
+    `Generated ${res.images.length} image(s) in ${res.generation_time_sec}s.`,
+  ];
+  if (res.images[0]?.ad_copy) {
+    lines.push(`Ad copy: ${res.images[0].ad_copy}`);
+  }
+  for (const img of res.images) {
+    lines.push(
+      `\n[${img.image_id}] ${img.platform} ${img.size} (${img.model_used})`,
+      img.prompt_used,
+      `View: ${resolveUploadUrl(img.image_url)}`,
+    );
+  }
+  if (res.knowledge_context) {
+    lines.push(`\nContext: ${res.knowledge_context.slice(0, 200)}…`);
+  }
+  return lines.filter(Boolean).join("\n");
 }

@@ -1,0 +1,42 @@
+{
+  "request_id": "94b81de9",
+  "brand_name": "StackGrowth.ai",
+  "campaign_goal": "A/B test ad creatives for StackGrowth.ai Real Estate AI Growth Launch. Context: Launching StackGrowth.ai — an AI automation partner for real estate professionals in Egypt and the MENA region. This campaign focuses on helping agencies and brokers automate lead follow-ups, client communication, CRM workflows, and sales operations using practical AI systems that save time and increase conversions.",
+  "images": [
+    {
+      "image_id": "94b81de9-v1",
+      "request_id": "94b81de9",
+      "local_path": "uploads\\images\\94b81de9-v1.png",
+      "prompt_used": "\"Professional real estate agent in modern Egyptian office, natural light, #2563EB and #7C3AED accents, clean lines, dark background with glowing UI, single focal point, geometric shapes, vibrant contrast, conveying efficiency and innovation, showcasing StackGrowth.ai's AI automation benefits.\"",
+      "ad_copy": "Automate Real Estate Growth with AI",
+      "platform": "instagram",
+      "size": "512x512",
+      "model_used": "pollinations-stable-diffusion",
+      "logo_applied": true,
+      "metadata": {
+        "brand": "StackGrowth.ai",
+        "campaign_goal": "A/B test ad creatives for StackGrowth.ai Real Estate AI Growth Launch. Context: Launching StackGrowth.ai — an AI automation partner for real estate professionals in Egypt and the MENA region. This campaign focuses on helping agencies and brokers automate lead follow-ups, client communication, CRM workflows, and sales operations using practical AI systems that save time and increase conversions.",
+        "variation": 0
+      }
+    },
+    {
+      "image_id": "94b81de9-v2",
+      "request_id": "94b81de9",
+      "local_path": "uploads\\images\\94b81de9-v2.png",
+      "prompt_used": "\"Generate a modern, professional Instagram ad for StackGrowth.ai, featuring a solo real estate agent in a bright, naturally lit Egyptian office, with a warm golden glow, using #2563EB and #7C3AED accents, and a clean composition, conveying a sense of innovative AI automation and increased productivity.\"",
+      "ad_copy": "Automate Real Estate Growth with AI",
+      "platform": "instagram",
+      "size": "512x512",
+      "model_used": "pollinations-stable-diffusion",
+      "logo_applied": true,
+      "metadata": {
+        "brand": "StackGrowth.ai",
+        "campaign_goal": "A/B test ad creatives for StackGrowth.ai Real Estate AI Growth Launch. Context: Launching StackGrowth.ai — an AI automation partner for real estate professionals in Egypt and the MENA region. This campaign focuses on helping agencies and brokers automate lead follow-ups, client communication, CRM workflows, and sales operations using practical AI systems that save time and increase conversions.",
+        "variation": 1
+      }
+    }
+  ],
+  "ab_test_ready": true,
+  "generation_time_sec": 92.33,
+  "knowledge_context": "Platform rules: Instagram ads: use bright vibrant colors, high contrast. Keep composition clean with single focal point. Lifestyle imagery with natural lighting works best.\nIndustry tips: Dark background with glowing UI, gradient blues and purples, geometric shapes."
+}

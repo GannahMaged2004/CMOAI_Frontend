@@ -27,11 +27,12 @@ import {
   generateContent,
   getContentAgentStatus,
 } from "../../services/contentAgentService";
-import { getDashboardUpcoming } from "../../services/dashboardService";
 import {
-  quickActionBlogPost,
-  quickActionImagePrompt,
-} from "../../services/quickActionsService";
+  generateImage,
+  getImageAgentStatus,
+} from "../../services/imageAgentService";
+import { getDashboardUpcoming } from "../../services/dashboardService";
+import { quickActionBlogPost } from "../../services/quickActionsService";
 import type {
   BrandOut,
   CampaignOut,
@@ -40,6 +41,9 @@ import type {
   ContentAgentType,
   ContentCalendarMap,
   TextAgentResponse,
+  ImageAgentResponse,
+  ImageAgentStatus,
+  ImageAgentPlatform,
   ChannelBreakdown,
 } from "../../types/api";
 
@@ -47,6 +51,7 @@ import { agents, nextActions } from "./constants";
 import type { AgentId, ChatMessage, DashboardNotification } from "./types";
 import {
   buildAgentDemoResponse,
+  formatImageAgentResponse,
   formatTextAgentResponse,
   launchWindowDaysFromStart,
 } from "./utils";
@@ -113,6 +118,21 @@ export default function Dashboard() {
   const [textLastResult, setTextLastResult] =
     useState<TextAgentResponse | null>(null);
   const [textDraft, setTextDraft] = useState("");
+
+  const getInitialImageChat = (): ChatMessage[] => [
+    {
+      role: "assistant",
+      text: "I can generate campaign visuals, ad creatives, and platform-ready images for this campaign.",
+    },
+  ];
+  const [imageChatMessages, setImageChatMessages] = useState<ChatMessage[]>(
+    getInitialImageChat(),
+  );
+  const [imageLastResult, setImageLastResult] =
+    useState<ImageAgentResponse | null>(null);
+  const [imageDraft, setImageDraft] = useState("");
+  const [imageAgentStatus, setImageAgentStatus] =
+    useState<ImageAgentStatus | null>(null);
 
   const [calendarData, setCalendarData] = useState<ContentCalendarMap | null>(
     null,
@@ -253,6 +273,22 @@ export default function Dashboard() {
     void getBrands()
       .then(setBrands)
       .catch((error) => console.error(error));
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    void getImageAgentStatus()
+      .then((status) => {
+        if (!cancelled) setImageAgentStatus(status);
+      })
+      .catch(() => {
+        if (!cancelled) setImageAgentStatus(null);
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
@@ -562,27 +598,80 @@ export default function Dashboard() {
     [textDraft, dashboardCampaign, runTextGenerate],
   );
 
-  const handleImagePrompt = useCallback(async () => {
+  const runImageGenerate = useCallback(
+    async (
+      message: string,
+      platform: ImageAgentPlatform,
+      numVariations: number,
+      busyKey: string,
+    ) => {
+      if (!dashboardCampaign) return;
+
+      setBusyAction(busyKey);
+      setImageChatMessages((prev) => [
+        ...prev,
+        { role: "user", text: message },
+      ]);
+
+      try {
+        const res = await generateImage({
+          message,
+          campaign_id: dashboardCampaign.id,
+          platform,
+          num_variations: numVariations,
+          logo_enabled: true,
+        });
+        setImageLastResult(res);
+        const formatted = formatImageAgentResponse(res);
+        setImageChatMessages((prev) => [
+          ...prev,
+          { role: "assistant", text: formatted },
+        ]);
+        showResult("Generated images", formatted);
+      } catch (e) {
+        const err =
+          e instanceof Error ? e.message : "Something went wrong";
+        setImageChatMessages((prev) => [
+          ...prev,
+          { role: "assistant", text: err },
+        ]);
+        showResult("Error", err);
+      } finally {
+        setBusyAction(null);
+      }
+    },
+    [dashboardCampaign, showResult],
+  );
+
+  const handleImageGenerateVisual = useCallback(() => {
     if (!dashboardCampaign) return;
+    void runImageGenerate(
+      `Campaign visual for ${dashboardCampaign.name}`,
+      "instagram",
+      1,
+      "imggen",
+    );
+  }, [dashboardCampaign, runImageGenerate]);
 
-    setBusyAction("imgp");
+  const handleImageGenerateVariations = useCallback(() => {
+    if (!dashboardCampaign) return;
+    void runImageGenerate(
+      `A/B test ad creatives for ${dashboardCampaign.name}`,
+      "instagram",
+      2,
+      "imgvar",
+    );
+  }, [dashboardCampaign, runImageGenerate]);
 
-    try {
-      const res = await quickActionImagePrompt({
-        prompt: `Campaign visual for ${dashboardCampaign.name}`,
-        brand_id: dashboardCampaign.brand_id,
-      });
-
-      showResult("Image prompt", res.result);
-    } catch (e) {
-      showResult(
-        "Error",
-        e instanceof Error ? e.message : "Something went wrong",
-      );
-    } finally {
-      setBusyAction(null);
-    }
-  }, [dashboardCampaign, showResult]);
+  const handleImageChatSend = useCallback(
+    (message = imageDraft) => {
+      const trimmed = message.trim();
+      if (!trimmed || !dashboardCampaign) return;
+      setImageDraft("");
+      void runImageGenerate(trimmed, "instagram", 1, "imgchat");
+    },
+    [imageDraft, dashboardCampaign, runImageGenerate],
+  );
 
   const handleImageAssets = useCallback(async () => {
     if (!dashboardCampaign) return;
@@ -1158,8 +1247,11 @@ export default function Dashboard() {
                     />
                   ) : activeAgentId === "image" ? (
                     <ImagePanels
+                      agentStatus={imageAgentStatus}
                       busyAction={busyAction}
-                      onPrompt={handleImagePrompt}
+                      lastResult={imageLastResult}
+                      onGenerateVisual={handleImageGenerateVisual}
+                      onGenerateVariations={handleImageGenerateVariations}
                       onAssets={handleImageAssets}
                       onReview={() =>
                         handleDemoAgentAction(
@@ -1220,7 +1312,12 @@ export default function Dashboard() {
               textDraft={textDraft}
               onTextDraftChange={setTextDraft}
               onTextChatSend={handleTextChatSend}
-              onImgPrompt={handleImagePrompt}
+              imageChatMessages={imageChatMessages}
+              imageLastResult={imageLastResult}
+              imageDraft={imageDraft}
+              onImageDraftChange={setImageDraft}
+              onImageChatSend={handleImageChatSend}
+              onImgGenerateVisual={handleImageGenerateVisual}
               onImgAssets={handleImageAssets}
               onVideoScript={handleVideoScript}
               onVideoBrief={handleVideoCreatorBrief}

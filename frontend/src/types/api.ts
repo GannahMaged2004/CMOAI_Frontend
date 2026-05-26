@@ -210,3 +210,54 @@ export interface ContentAgentStatus {
   mode: "live" | "fallback";
   configured: boolean;
 }
+
+export type ImageAgentPlatform =
+  | "instagram"
+  | "facebook"
+  | "tiktok"
+  | "linkedin"
+  | "general";
+
+export type ImageAgentSize = "512x512" | "768x768" | "1024x1024";
+
+export interface ImageAgentRequest {
+  message: string;
+  campaign_id: number;
+  platform?: ImageAgentPlatform;
+  image_size?: ImageAgentSize;
+  num_variations?: number;
+  logo_enabled?: boolean;
+  ad_copy?: string | null;
+}
+
+export interface GeneratedImageOut {
+  image_id: string;
+  request_id: string;
+  local_path: string;
+  image_url: string;
+  prompt_used: string;
+  ad_copy: string;
+  platform: string;
+  size: string;
+  model_used: string;
+  logo_applied: boolean;
+  metadata: Record<string, unknown>;
+}
+
+export interface ImageAgentResponse {
+  request_id: string;
+  brand_name: string;
+  campaign_goal: string;
+  images: GeneratedImageOut[];
+  ab_test_ready: boolean;
+  generation_time_sec: number;
+  knowledge_context: string;
+}
+
+export interface ImageAgentStatus {
+  provider: string;
+  model: string;
+  image_backend: string;
+  groq_configured: boolean;
+  output_dir: string;
+}

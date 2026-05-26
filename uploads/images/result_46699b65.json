@@ -1,0 +1,26 @@
+{
+  "request_id": "46699b65",
+  "brand_name": "Veltrix",
+  "campaign_goal": "A premium futuristic brand campaign for “Veltrix Genesis”, modern digital agency for ambitious startups and next-generation businesses, sleek innovation-driven aesthetic, cinematic lighting, ultra clean composition, bold typography, glowing UI elements, abstract technology visuals, luxury startup branding, futuristic gradients in deep black, electric blue, violet and silver, creative digital ecosystem, minimal yet powerful design, sophisticated corporate identity, high-end tech atmosphere, modern web3 and AI inspired visuals, dynamic energy, sharp details, depth, volumetric lighting, professional advertising campaign style, visually striking, Apple-meets-Cyberpunk aesthetic, 8k, ultra realistic, polished, elegant. Context: Introducing Veltrix — a modern digital brand built for ambitious startups and next-generation businesses. This campaign focuses on building brand awareness, showcasing innovation-driven design and technology, and positioning Veltrix as a bold creative partner for businesses that want to stand out in the digital world.",
+  "images": [
+    {
+      "image_id": "46699b65-v1",
+      "request_id": "46699b65",
+      "local_path": "uploads\\images\\46699b65-v1.png",
+      "prompt_used": "\"Veltrix Genesis: a sleek, modern digital agency. Cinematic lighting, ultra-clean composition, bold typography, and glowing UI elements in #2563EB and #7C3AED, set against a deep black background with futuristic gradients and volumetric lighting, showcasing innovation-driven design and technology.\"",
+      "ad_copy": "Empowering Futures, Redefined.",
+      "platform": "instagram",
+      "size": "512x512",
+      "model_used": "pollinations-stable-diffusion",
+      "logo_applied": true,
+      "metadata": {
+        "brand": "Veltrix",
+        "campaign_goal": "A premium futuristic brand campaign for “Veltrix Genesis”, modern digital agency for ambitious startups and next-generation businesses, sleek innovation-driven aesthetic, cinematic lighting, ultra clean composition, bold typography, glowing UI elements, abstract technology visuals, luxury startup branding, futuristic gradients in deep black, electric blue, violet and silver, creative digital ecosystem, minimal yet powerful design, sophisticated corporate identity, high-end tech atmosphere, modern web3 and AI inspired visuals, dynamic energy, sharp details, depth, volumetric lighting, professional advertising campaign style, visually striking, Apple-meets-Cyberpunk aesthetic, 8k, ultra realistic, polished, elegant. Context: Introducing Veltrix — a modern digital brand built for ambitious startups and next-generation businesses. This campaign focuses on building brand awareness, showcasing innovation-driven design and technology, and positioning Veltrix as a bold creative partner for businesses that want to stand out in the digital world.",
+        "variation": 0
+      }
+    }
+  ],
+  "ab_test_ready": false,
+  "generation_time_sec": 61.04,
+  "knowledge_context": "Platform rules: Instagram ads: use bright vibrant colors, high contrast. Keep composition clean with single focal point. Lifestyle imagery with natural lighting works best.\nIndustry tips: Dark background with glowing UI, gradient blues and purples, geometric shapes."
+}

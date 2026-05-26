@@ -1,0 +1,42 @@
+{
+  "request_id": "4a149d88",
+  "brand_name": "StackGrowth.ai",
+  "campaign_goal": "Product launch hero visual for our SaaS trial conversion campaign. Context: Launching StackGrowth.ai — an AI automation partner for real estate professionals in Egypt and the MENA region. This campaign focuses on helping agencies and brokers automate lead follow-ups, client communication, CRM workflows, and sales operations using practical AI systems that save time and increase conversions.",
+  "images": [
+    {
+      "image_id": "4a149d88-v1",
+      "request_id": "4a149d88",
+      "local_path": "uploads\\images\\4a149d88-v1.png",
+      "prompt_used": "\"Generate a modern, professional image for StackGrowth.ai's SaaS trial launch: a solo real estate agent in a bright, naturally-lit Egyptian office, with a laptop featuring a glowing UI in #2563EB and #7C3AED, against a clean, dark background, with geometric shapes and a single focal point, conveying a sense of innovation and efficiency.\"",
+      "ad_copy": "Automate. Accelerate. Grow.",
+      "platform": "instagram",
+      "size": "512x512",
+      "model_used": "pollinations-stable-diffusion",
+      "logo_applied": true,
+      "metadata": {
+        "brand": "StackGrowth.ai",
+        "campaign_goal": "Product launch hero visual for our SaaS trial conversion campaign. Context: Launching StackGrowth.ai — an AI automation partner for real estate professionals in Egypt and the MENA region. This campaign focuses on helping agencies and brokers automate lead follow-ups, client communication, CRM workflows, and sales operations using practical AI systems that save time and increase conversions.",
+        "variation": 0
+      }
+    },
+    {
+      "image_id": "4a149d88-v2",
+      "request_id": "4a149d88",
+      "local_path": "uploads\\images\\4a149d88-v2.png",
+      "prompt_used": "\"Generate a modern StackGrowth.ai hero image with a solo real estate professional in a bright, naturally lit Egyptian or MENA region setting, warm golden color mood, #2563EB and #7C3AED accents, clean composition, and a single focal point on a tablet or laptop with glowing UI, conveying professionalism and automation.\"",
+      "ad_copy": "Automate. Accelerate. Grow.",
+      "platform": "instagram",
+      "size": "512x512",
+      "model_used": "pollinations-stable-diffusion",
+      "logo_applied": true,
+      "metadata": {
+        "brand": "StackGrowth.ai",
+        "campaign_goal": "Product launch hero visual for our SaaS trial conversion campaign. Context: Launching StackGrowth.ai — an AI automation partner for real estate professionals in Egypt and the MENA region. This campaign focuses on helping agencies and brokers automate lead follow-ups, client communication, CRM workflows, and sales operations using practical AI systems that save time and increase conversions.",
+        "variation": 1
+      }
+    }
+  ],
+  "ab_test_ready": true,
+  "generation_time_sec": 92.42,
+  "knowledge_context": "Platform rules: Instagram ads: use bright vibrant colors, high contrast. Keep composition clean with single focal point. Lifestyle imagery with natural lighting works best.\nIndustry tips: Dark background with glowing UI, gradient blues and purples, geometric shapes."
+}
