@@ -33,8 +33,8 @@ export function ImagePanels({
           <h2 className="text-2xl font-semibold">Image Generation</h2>
           {agentStatus ? (
             <div className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-xs text-white/60">
-              {agentStatus.image_backend}
-              {agentStatus.groq_configured ? " · Groq prompts" : " · rule-based prompts"}
+              Groq prompts · {agentStatus.image_backend} images
+              {!agentStatus.image_backend_configured ? " · backend key missing" : ""}
             </div>
           ) : null}
         </div>

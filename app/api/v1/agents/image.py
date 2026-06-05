@@ -19,11 +19,13 @@ from app.schemas.agents.image_agent import (
 from app.services.image_agent import (
     AdPlatform,
     BrandProfile,
+    ImageGenerationError,
     ImageRequest,
     ImageSize,
     LogoConfig,
     LogoPosition,
     OUTPUT_DIR,
+    _resolve_image_backend,
     run_image_agent,
 )
 
@@ -115,11 +117,16 @@ def _result_to_response(result) -> ImageAgentResponse:
 
 @router.get("/status", response_model=ImageAgentStatus)
 async def image_agent_status():
+    backend = _resolve_image_backend()
+    configured = bool(
+        settings.RUNWAY_API_KEY if backend == "runway" else settings.POLLINATIONS_API_KEY
+    )
     return ImageAgentStatus(
         provider="groq",
         model=settings.GROQ_MODEL,
-        image_backend="pollinations",
+        image_backend=backend,
         groq_configured=bool(settings.GROQ_API_KEY),
+        image_backend_configured=configured,
         output_dir=str(OUTPUT_DIR.resolve()),
     )
 
@@ -161,6 +168,8 @@ async def generate_image(
 
     try:
         output = await asyncio.to_thread(run_image_agent, agent_request)
+    except ImageGenerationError as e:
+        raise HTTPException(status_code=503, detail=str(e)) from e
     except Exception as e:
         raise HTTPException(
             status_code=500,

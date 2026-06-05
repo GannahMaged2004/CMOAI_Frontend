@@ -22,7 +22,7 @@ from app.api.v1 import (
     teams,
     users,
 )
-from app.api.v1.agents import content, image
+from app.api.v1.agents import content, image, video
 
 api_router = APIRouter()
 
@@ -41,4 +41,5 @@ api_router.include_router(billing.router)
 api_router.include_router(quick_actions.router) 
 api_router.include_router(content.router)
 api_router.include_router(image.router)
+api_router.include_router(video.router)
 

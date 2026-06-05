@@ -37,6 +37,7 @@ class Settings(BaseSettings):
     # ── Groq (LLM) ───────────────────────────────────────────
     GROQ_API_KEY: str = ""
     GROQ_MODEL: str = "llama-3.3-70b-versatile"
+    GROQ_MAX_TOKENS: int = 4096
     LLM_PROVIDER: str = "groq"  # "groq" or "openai"
 
     # ── OpenAI (optional) ────────────────────────────────────
@@ -51,6 +52,21 @@ class Settings(BaseSettings):
     COHERE_API_KEY: str = ""
     PINECONE_API_KEY: str = ""
     PINECONE_INDEX_NAME: str = "cmo-content-kb"
+
+    # ── Runway (video + image agent) ─────────────────────────
+    RUNWAY_API_KEY: str = ""
+    RUNWAY_MODEL: str = "gen4.5"
+    RUNWAY_RATIO: str = "1280:720"
+    RUNWAY_DURATION: int = 5
+    RUNWAY_IMAGE_MODEL: str = "gen4_image"
+
+    # ── Image agent backend ──────────────────────────────────
+    # auto = Runway when RUNWAY_API_KEY is set, else Pollinations when configured
+    IMAGE_BACKEND: str = "auto"
+
+    # ── Pollinations (optional image fallback) ─────────────
+    POLLINATIONS_API_KEY: str = ""
+    POLLINATIONS_MODEL: str = "flux"
 
 
 settings = Settings()

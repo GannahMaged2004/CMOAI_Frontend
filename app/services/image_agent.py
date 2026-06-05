@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 import time
 import uuid
@@ -17,13 +18,32 @@ from PIL import Image, ImageDraw, ImageFont
 from app.core.config import settings
 
 # ── Config ────────────────────────────────────────────────────
-GROQ_API_KEY     = settings.GROQ_API_KEY
-GROQ_MODEL       = settings.GROQ_MODEL
-GROQ_API_URL     = "https://api.groq.com/openai/v1/chat/completions"
-POLLINATIONS_URL = "https://image.pollinations.ai/prompt/"
+logger = logging.getLogger(__name__)
+
+GROQ_API_KEY           = settings.GROQ_API_KEY
+GROQ_MODEL             = settings.GROQ_MODEL
+GROQ_API_URL           = "https://api.groq.com/openai/v1/chat/completions"
+RUNWAY_API_KEY         = settings.RUNWAY_API_KEY
+RUNWAY_IMAGE_MODEL     = settings.RUNWAY_IMAGE_MODEL
+RUNWAY_BASE_URL        = "https://api.dev.runwayml.com/v1"
+RUNWAY_API_VERSION     = "2024-11-06"
+POLLINATIONS_API_KEY   = settings.POLLINATIONS_API_KEY
+POLLINATIONS_MODEL     = settings.POLLINATIONS_MODEL
+POLLINATIONS_IMAGE_URL = "https://gen.pollinations.ai/image/"
+IMAGE_BACKEND          = (settings.IMAGE_BACKEND or "auto").strip().lower()
 
 OUTPUT_DIR = Path("uploads/images")
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+
+_SIZE_TO_RUNWAY_RATIO = {
+    "512x512": "1024:1024",
+    "768x768": "1024:1024",
+    "1024x1024": "1024:1024",
+}
+
+
+class ImageGenerationError(Exception):
+    """Raised when the image backend cannot produce an image."""
 
 
 # ── Enums ─────────────────────────────────────────────────────
@@ -331,6 +351,120 @@ class LogoOverlay:
 
 # ── Image Generator ───────────────────────────────────────────
 
+def _resolve_image_backend() -> str:
+    if IMAGE_BACKEND in ("runway", "pollinations"):
+        return IMAGE_BACKEND
+    if RUNWAY_API_KEY:
+        return "runway"
+    if POLLINATIONS_API_KEY:
+        return "pollinations"
+    return "runway"
+
+
+class RunwayImageGenerator:
+
+    REQUEST_TIMEOUT = 60
+    POLL_TIMEOUT_S  = 180
+    PROMPT_MAX_CHARS = 1000
+
+    def generate_and_save(self, prompt: str, image_id: str, size: ImageSize) -> tuple:
+        if not RUNWAY_API_KEY:
+            raise ImageGenerationError(
+                "Runway API key is not configured. Set RUNWAY_API_KEY in .env."
+            )
+
+        prompt_text = " ".join((prompt or "").split())
+        if not prompt_text:
+            raise ImageGenerationError("Image prompt is empty.")
+        if len(prompt_text) > self.PROMPT_MAX_CHARS:
+            prompt_text = prompt_text[: self.PROMPT_MAX_CHARS - 3].rstrip() + "..."
+
+        ratio = _SIZE_TO_RUNWAY_RATIO.get(size.value, "1024:1024")
+        headers = {
+            "Authorization": f"Bearer {RUNWAY_API_KEY}",
+            "Content-Type": "application/json",
+            "X-Runway-Version": RUNWAY_API_VERSION,
+        }
+        payload = {
+            "model": RUNWAY_IMAGE_MODEL,
+            "promptText": prompt_text,
+            "ratio": ratio,
+        }
+
+        try:
+            create_resp = requests.post(
+                f"{RUNWAY_BASE_URL}/text_to_image",
+                headers=headers,
+                json=payload,
+                timeout=self.REQUEST_TIMEOUT,
+            )
+        except requests.RequestException as exc:
+            raise ImageGenerationError(f"Runway request failed: {exc}") from exc
+
+        if not create_resp.ok:
+            raise ImageGenerationError(
+                f"Runway image request failed ({create_resp.status_code}): "
+                f"{create_resp.text[:240]}"
+            )
+
+        job_id = create_resp.json().get("id")
+        if not job_id:
+            raise ImageGenerationError("Runway response missing job id.")
+
+        image_url = self._poll_until_ready(str(job_id), headers)
+        return self._download_and_save(image_url, image_id), f"runway-{RUNWAY_IMAGE_MODEL}"
+
+    def _poll_until_ready(self, job_id: str, headers: dict) -> str:
+        started = time.time()
+        waiting = {"PENDING", "RUNNING", "THROTTLED"}
+        while time.time() - started < self.POLL_TIMEOUT_S:
+            try:
+                resp = requests.get(
+                    f"{RUNWAY_BASE_URL}/tasks/{job_id}",
+                    headers=headers,
+                    timeout=self.REQUEST_TIMEOUT,
+                )
+            except requests.RequestException as exc:
+                raise ImageGenerationError(f"Runway polling failed: {exc}") from exc
+
+            if not resp.ok:
+                raise ImageGenerationError(
+                    f"Runway polling failed ({resp.status_code}): {resp.text[:240]}"
+                )
+
+            data = resp.json()
+            status = str(data.get("status", "")).upper()
+            logger.info("[Runway Image] Job %s status: %s", job_id, status)
+
+            if status == "SUCCEEDED":
+                output = data.get("output", [])
+                if isinstance(output, list) and output:
+                    return str(output[0])
+                raise ImageGenerationError("Runway job succeeded but output URL is missing.")
+            if status == "FAILED":
+                raise ImageGenerationError("Runway image generation failed.")
+            if status in waiting:
+                time.sleep(3)
+                continue
+            raise ImageGenerationError(f"Unexpected Runway status '{status}'.")
+
+        raise ImageGenerationError(
+            f"Runway image generation timed out after {self.POLL_TIMEOUT_S}s."
+        )
+
+    @staticmethod
+    def _download_and_save(image_url: str, image_id: str) -> str:
+        try:
+            resp = requests.get(image_url, timeout=120)
+            resp.raise_for_status()
+        except requests.RequestException as exc:
+            raise ImageGenerationError(f"Failed to download Runway image: {exc}") from exc
+
+        path = OUTPUT_DIR / (image_id + ".png")
+        path.write_bytes(resp.content)
+        return str(path)
+
+
 class PollinationsImageGenerator:
 
     MAX_RETRIES     = 3
@@ -338,37 +472,88 @@ class PollinationsImageGenerator:
     REQUEST_TIMEOUT = 120
 
     def generate_and_save(self, prompt: str, image_id: str, size: ImageSize) -> tuple:
-        w, h  = size.value.split("x")
-        seed  = abs(hash(image_id)) % 99999
-        url   = (
-            POLLINATIONS_URL + urllib.parse.quote(prompt)
-            + "?width=" + w + "&height=" + h + "&nologo=true&seed=" + str(seed)
+        if not POLLINATIONS_API_KEY:
+            raise ImageGenerationError(
+                "Pollinations API key is not configured. "
+                "Set POLLINATIONS_API_KEY in .env (get one at https://enter.pollinations.ai)."
+            )
+
+        w, h = size.value.split("x")
+        seed = abs(hash(image_id)) % 99999
+        params = urllib.parse.urlencode(
+            {
+                "width": w,
+                "height": h,
+                "seed": seed,
+                "model": POLLINATIONS_MODEL,
+                "nologo": "true",
+                "key": POLLINATIONS_API_KEY,
+            }
         )
+        url = f"{POLLINATIONS_IMAGE_URL}{urllib.parse.quote(prompt)}?{params}"
+        headers = {"Authorization": f"Bearer {POLLINATIONS_API_KEY}"}
+        last_error = "Unknown error"
+
         for attempt in range(1, self.MAX_RETRIES + 1):
             try:
-                resp = requests.get(url, timeout=self.REQUEST_TIMEOUT)
-                resp.raise_for_status()
-                if resp.headers.get("content-type", "").startswith("image"):
+                resp = requests.get(
+                    url,
+                    headers=headers,
+                    timeout=self.REQUEST_TIMEOUT,
+                )
+                content_type = resp.headers.get("content-type", "")
+                if resp.ok and content_type.startswith("image"):
                     path = OUTPUT_DIR / (image_id + ".png")
                     path.write_bytes(resp.content)
-                    return str(path), "pollinations-stable-diffusion"
+                    return str(path), f"pollinations-{POLLINATIONS_MODEL}"
+
+                last_error = self._extract_error(resp)
+                logger.warning(
+                    "Pollinations image attempt %s/%s failed: HTTP %s — %s",
+                    attempt,
+                    self.MAX_RETRIES,
+                    resp.status_code,
+                    last_error,
+                )
+                if resp.status_code in (401, 402, 403):
+                    break
                 time.sleep(self.RETRY_DELAY_S)
             except requests.exceptions.Timeout:
+                last_error = "Request timed out"
+                logger.warning(
+                    "Pollinations image attempt %s/%s timed out",
+                    attempt,
+                    self.MAX_RETRIES,
+                )
                 time.sleep(self.RETRY_DELAY_S)
-            except Exception:
-                time.sleep(self.RETRY_DELAY_S)
-        return self._placeholder(image_id), "placeholder"
+
+        raise ImageGenerationError(
+            f"Image generation failed after {self.MAX_RETRIES} attempts: {last_error}"
+        )
 
     @staticmethod
-    def _placeholder(image_id: str) -> str:
-        img  = Image.new("RGB", (512, 512), color="#1a1a2e")
-        draw = ImageDraw.Draw(img)
-        draw.rectangle([20, 20, 492, 492], outline="#e94560", width=3)
-        draw.text((50, 220), "CMO.AI — Image Agent",                fill="#e94560")
-        draw.text((50, 260), "Generation failed — check connection", fill="#aaaaaa")
-        path = OUTPUT_DIR / (image_id + ".png")
-        img.save(path)
-        return str(path)
+    def _extract_error(resp: requests.Response) -> str:
+        content_type = resp.headers.get("content-type", "")
+        if "json" in content_type:
+            try:
+                payload = resp.json()
+                if isinstance(payload, dict):
+                    err = payload.get("error")
+                    if isinstance(err, dict) and err.get("message"):
+                        return str(err["message"])
+                    if payload.get("message"):
+                        return str(payload["message"])
+            except ValueError:
+                pass
+        text = (resp.text or "").strip()
+        return text[:240] if text else f"HTTP {resp.status_code}"
+
+
+def _build_image_generator():
+    backend = _resolve_image_backend()
+    if backend == "runway":
+        return RunwayImageGenerator(), "runway"
+    return PollinationsImageGenerator(), "pollinations"
 
 
 # ── Main Agent ────────────────────────────────────────────────
@@ -379,7 +564,7 @@ class ImageGenerationAgent:
         self.kb      = ImageKnowledgeBase()
         self.llm     = GroqLLM()
         self.builder = ImagePromptBuilder(self.llm)
-        self.gen     = PollinationsImageGenerator()
+        self.gen, self.image_backend = _build_image_generator()
         self.logo    = LogoOverlay()
 
     def run(self, request: ImageRequest) -> ImageGenerationResult:

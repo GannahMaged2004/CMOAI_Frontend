@@ -259,5 +259,43 @@ export interface ImageAgentStatus {
   model: string;
   image_backend: string;
   groq_configured: boolean;
+  image_backend_configured: boolean;
   output_dir: string;
+}
+
+export interface VideoAgentRequest {
+  message: string;
+  campaign_id: number;
+  platforms?: string[];
+  budget?: string;
+}
+
+export interface ScriptOut {
+  hook?: string | null;
+  body?: string | null;
+  cta?: string | null;
+}
+
+export interface VideoPlanOut {
+  concept?: string | null;
+  script?: ScriptOut | null;
+  scenes?: string[];
+  visual_style?: string | null;
+  audio_style?: string | null;
+}
+
+export interface ReasoningOut {
+  psychological_trigger?: string | null;
+  content_angle?: string | null;
+  hook_rationale?: string | null;
+  why_this_works?: string | null;
+}
+
+export interface VideoAgentResponse {
+  status: string;
+  video_plan?: VideoPlanOut | null;
+  reasoning?: ReasoningOut | null;
+  video_prompt?: string | null;
+  video_url?: string | null;
+  error_message?: string | null;
 }

@@ -46,4 +46,5 @@ class ImageAgentStatus(BaseModel):
     model: str
     image_backend: str
     groq_configured: bool
+    image_backend_configured: bool
     output_dir: str

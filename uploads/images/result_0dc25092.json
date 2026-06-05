@@ -1,0 +1,42 @@
+{
+  "request_id": "0dc25092",
+  "brand_name": "Veltrix",
+  "campaign_goal": "A/B test ad creatives for Veltrix Genesis. Context: Introducing Veltrix — a modern digital brand built for ambitious startups and next-generation businesses. This campaign focuses on building brand awareness, showcasing innovation-driven design and technology, and positioning Veltrix as a bold creative partner for businesses that want to stand out in the digital world.",
+  "images": [
+    {
+      "image_id": "0dc25092-v1",
+      "request_id": "0dc25092",
+      "local_path": "uploads\\images\\0dc25092-v1.png",
+      "prompt_used": "\"Create a modern, bold Instagram ad for Veltrix Genesis: a startup founder in a bright, naturally-lit workspace, with a dark blue (#2563EB) background, interacting with a glowing UI featuring #7C3AED accents, and geometric shapes, conveying innovation and creativity, with a clean composition and high contrast.\"",
+      "ad_copy": "Disrupt Digital with Veltrix",
+      "platform": "instagram",
+      "size": "512x512",
+      "model_used": "placeholder",
+      "logo_applied": true,
+      "metadata": {
+        "brand": "Veltrix",
+        "campaign_goal": "A/B test ad creatives for Veltrix Genesis. Context: Introducing Veltrix — a modern digital brand built for ambitious startups and next-generation businesses. This campaign focuses on building brand awareness, showcasing innovation-driven design and technology, and positioning Veltrix as a bold creative partner for businesses that want to stand out in the digital world.",
+        "variation": 0
+      }
+    },
+    {
+      "image_id": "0dc25092-v2",
+      "request_id": "0dc25092",
+      "local_path": "uploads\\images\\0dc25092-v2.png",
+      "prompt_used": "\"Create a modern, professional Instagram ad for Veltrix Genesis with a bold, warm golden color mood, featuring a single startup founder in a bright, naturally-lit environment, surrounded by glowing UI elements and geometric shapes in #2563EB and #7C3AED, with a clean composition and high contrast.\"",
+      "ad_copy": "Disrupt Digital with Veltrix",
+      "platform": "instagram",
+      "size": "512x512",
+      "model_used": "placeholder",
+      "logo_applied": true,
+      "metadata": {
+        "brand": "Veltrix",
+        "campaign_goal": "A/B test ad creatives for Veltrix Genesis. Context: Introducing Veltrix — a modern digital brand built for ambitious startups and next-generation businesses. This campaign focuses on building brand awareness, showcasing innovation-driven design and technology, and positioning Veltrix as a bold creative partner for businesses that want to stand out in the digital world.",
+        "variation": 1
+      }
+    }
+  ],
+  "ab_test_ready": true,
+  "generation_time_sec": 35.22,
+  "knowledge_context": "Platform rules: Instagram ads: use bright vibrant colors, high contrast. Keep composition clean with single focal point. Lifestyle imagery with natural lighting works best.\nIndustry tips: Dark background with glowing UI, gradient blues and purples, geometric shapes."
+}

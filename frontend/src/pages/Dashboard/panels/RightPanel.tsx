@@ -8,8 +8,9 @@ import { buildAgentSuggestions, getAgentDemoIntro } from "../utils";
 import { SuggestionList } from "../components/SuggestionList";
 import { TextRightAside } from "./TextRightAside";
 import { ImageRightAside } from "./ImageRightAside";
+import { VideoRightAside } from "./VideoRightAside";
 import { AnalyticsRightAside } from "./AnalyticsRightAside";
-import type { ImageAgentResponse } from "../../../types/api";
+import type { ImageAgentResponse, VideoAgentResponse } from "../../../types/api";
 
 export function RightPanel({
   activeAgent,
@@ -34,7 +35,13 @@ export function RightPanel({
   onImageChatSend,
   onImgGenerateVisual,
   onImgAssets,
+  videoChatMessages,
+  videoLastResult,
+  videoDraft,
+  onVideoDraftChange,
+  onVideoChatSend,
   onVideoScript,
+  onVideoStoryboard,
   onVideoBrief,
   busyAction,
 }: {
@@ -60,7 +67,13 @@ export function RightPanel({
   onImageChatSend: (message?: string) => void;
   onImgGenerateVisual: () => void;
   onImgAssets: () => void;
+  videoChatMessages: ChatMessage[];
+  videoLastResult: VideoAgentResponse | null;
+  videoDraft: string;
+  onVideoDraftChange: (v: string) => void;
+  onVideoChatSend: (message?: string) => void;
   onVideoScript: () => void;
+  onVideoStoryboard: () => void;
   onVideoBrief: () => void;
   busyAction: string | null;
 }) {
@@ -108,14 +121,18 @@ export function RightPanel({
     }
     if (activeAgent.id === "video") {
       if (action === "Write short video script") {
-        void onVideoScript();
+        onVideoScript();
+        return;
+      }
+      if (action === "Create storyboard") {
+        onVideoStoryboard();
         return;
       }
       if (action === "Plan creator brief") {
-        void onVideoBrief();
+        onVideoBrief();
         return;
       }
-      onDemoAction("video", action);
+      onVideoChatSend(action);
       return;
     }
     if (activeAgent.id === "analytics") {
@@ -286,6 +303,25 @@ export function RightPanel({
     );
   }
 
+  if (activeAgent.id === "video") {
+    return (
+      <VideoRightAside
+        activeAgent={activeAgent}
+        campaignName={campaign?.name ?? "-"}
+        messages={videoChatMessages}
+        lastResult={videoLastResult}
+        draft={videoDraft}
+        onDraftChange={onVideoDraftChange}
+        onSend={onVideoChatSend}
+        suggestions={suggestions}
+        onScript={onVideoScript}
+        onStoryboard={onVideoStoryboard}
+        onCreatorBrief={onVideoBrief}
+        busyAction={busyAction}
+      />
+    );
+  }
+
   if (activeAgent.id === "text") {
     return (
       <TextRightAside
@@ -318,9 +354,9 @@ export function RightPanel({
       if (label === "Find calendar gaps") onDemoAction("calendar", label);
     }
     if (activeAgent.id === "video") {
-      if (label === "Write short video script") void onVideoScript();
-      if (label === "Create storyboard") onDemoAction("video", label);
-      if (label === "Plan creator brief") void onVideoBrief();
+      if (label === "Write short video script") onVideoScript();
+      if (label === "Create storyboard") onVideoStoryboard();
+      if (label === "Plan creator brief") onVideoBrief();
     }
   };
 
@@ -333,6 +369,7 @@ export function RightPanel({
     if (label === "Create image prompts") return busyAction === "imggen";
     if (label === "Draft asset briefs") return busyAction === "assets";
     if (label === "Write short video script") return busyAction === "vscript";
+    if (label === "Create storyboard") return busyAction === "vstoryboard";
     if (label === "Plan creator brief") return busyAction === "vbrief";
     return false;
   };

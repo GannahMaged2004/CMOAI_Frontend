@@ -1,0 +1,26 @@
+{
+  "request_id": "263d9cb4",
+  "brand_name": "Test Brand",
+  "campaign_goal": "Instagram ad for new coffee blend",
+  "images": [
+    {
+      "image_id": "263d9cb4-v1",
+      "request_id": "263d9cb4",
+      "local_path": "uploads\\images\\263d9cb4-v1.png",
+      "prompt_used": "\"Warmly lit, overhead shot of a cup of Test Brand's new coffee blend, #FFD700 liquid and #8B4513 wood accents, cozy modern style, steam rising, single focal point, high contrast, natural lighting, vibrant colors, inviting mood, for Instagram ad.\"",
+      "ad_copy": "Warm up with Test Brand's richest blend yet",
+      "platform": "instagram",
+      "size": "512x512",
+      "model_used": "runway-gen4_image",
+      "logo_applied": false,
+      "metadata": {
+        "brand": "Test Brand",
+        "campaign_goal": "Instagram ad for new coffee blend",
+        "variation": 0
+      }
+    }
+  ],
+  "ab_test_ready": false,
+  "generation_time_sec": 29.83,
+  "knowledge_context": "Platform rules: Instagram ads: use bright vibrant colors, high contrast. Keep composition clean with single focal point. Lifestyle imagery with natural lighting works best.\nIndustry tips: Warm lighting, overhead angle, fresh vibrant colors, steam effects."
+}

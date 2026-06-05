@@ -1,0 +1,26 @@
+{
+  "request_id": "c0d3c421",
+  "brand_name": "Veltrix",
+  "campaign_goal": "Create a premium brand-awareness advertising campaign visual for \"Veltrix Genesis.\" Showcase Veltrix as a futuristic digital brand and creative technology partner for ambitious startups and next-generation businesses. Feature a sleek, innovation-driven environment with abstract digital architecture, flowing data streams, holographic interfaces, and cutting-edge design elements. Convey creativity, growth, transformation, and technological excellence. Modern luxury branding, bold visual identity, clean composition, sophisticated typography space, cinematic lighting, premium startup aesthetic, high-end corporate advertising style. Color palette of deep black, electric blue, vibrant violet, and subtle neon accents. Dynamic sense of motion and progress, inspiring confidence and innovation. Ultra-realistic, photorealistic, 8K quality, award-winning advertising campaign, professional commercial photography mixed with futuristic digital art, social-media-ready, highly engaging, brand-focused, with generous negative space for logo, headline, and call-to-action.. Context: Introducing Veltrix — a modern digital brand built for ambitious startups and next-generation businesses. This campaign focuses on building brand awareness, showcasing innovation-driven design and technology, and positioning Veltrix as a bold creative partner for businesses that want to stand out in the digital world.",
+  "images": [
+    {
+      "image_id": "c0d3c421-v1",
+      "request_id": "c0d3c421",
+      "local_path": "uploads\\images\\c0d3c421-v1.png",
+      "prompt_used": "\"Veltrix Genesis: futuristic digital landscape with abstract architecture, holographic interfaces, and data streams, set against a deep black background with #2563EB and #7C3AED accents, cinematic lighting, clean composition, and bold typography, conveying creativity and innovation, with generous negative space.\"",
+      "ad_copy": "Empowering Ambition",
+      "platform": "instagram",
+      "size": "512x512",
+      "model_used": "placeholder",
+      "logo_applied": true,
+      "metadata": {
+        "brand": "Veltrix",
+        "campaign_goal": "Create a premium brand-awareness advertising campaign visual for \"Veltrix Genesis.\" Showcase Veltrix as a futuristic digital brand and creative technology partner for ambitious startups and next-generation businesses. Feature a sleek, innovation-driven environment with abstract digital architecture, flowing data streams, holographic interfaces, and cutting-edge design elements. Convey creativity, growth, transformation, and technological excellence. Modern luxury branding, bold visual identity, clean composition, sophisticated typography space, cinematic lighting, premium startup aesthetic, high-end corporate advertising style. Color palette of deep black, electric blue, vibrant violet, and subtle neon accents. Dynamic sense of motion and progress, inspiring confidence and innovation. Ultra-realistic, photorealistic, 8K quality, award-winning advertising campaign, professional commercial photography mixed with futuristic digital art, social-media-ready, highly engaging, brand-focused, with generous negative space for logo, headline, and call-to-action.. Context: Introducing Veltrix — a modern digital brand built for ambitious startups and next-generation businesses. This campaign focuses on building brand awareness, showcasing innovation-driven design and technology, and positioning Veltrix as a bold creative partner for businesses that want to stand out in the digital world.",
+        "variation": 0
+      }
+    }
+  ],
+  "ab_test_ready": false,
+  "generation_time_sec": 17.59,
+  "knowledge_context": "Platform rules: Instagram ads: use bright vibrant colors, high contrast. Keep composition clean with single focal point. Lifestyle imagery with natural lighting works best.\nIndustry tips: Dark background with glowing UI, gradient blues and purples, geometric shapes."
+}

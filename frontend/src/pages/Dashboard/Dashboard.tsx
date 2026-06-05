@@ -31,8 +31,8 @@ import {
   generateImage,
   getImageAgentStatus,
 } from "../../services/imageAgentService";
+import { generateVideo } from "../../services/videoAgentService";
 import { getDashboardUpcoming } from "../../services/dashboardService";
-import { quickActionBlogPost } from "../../services/quickActionsService";
 import type {
   BrandOut,
   CampaignOut,
@@ -44,6 +44,7 @@ import type {
   ImageAgentResponse,
   ImageAgentStatus,
   ImageAgentPlatform,
+  VideoAgentResponse,
   ChannelBreakdown,
 } from "../../types/api";
 
@@ -133,6 +134,19 @@ export default function Dashboard() {
   const [imageDraft, setImageDraft] = useState("");
   const [imageAgentStatus, setImageAgentStatus] =
     useState<ImageAgentStatus | null>(null);
+
+  const getInitialVideoChat = (): ChatMessage[] => [
+    {
+      role: "assistant",
+      text: "I can create scripts, shot lists, storyboards, and creator briefs for this campaign.",
+    },
+  ];
+  const [videoChatMessages, setVideoChatMessages] = useState<ChatMessage[]>(
+    getInitialVideoChat(),
+  );
+  const [videoLastResult, setVideoLastResult] =
+    useState<VideoAgentResponse | null>(null);
+  const [videoDraft, setVideoDraft] = useState("");
 
   const [calendarData, setCalendarData] = useState<ContentCalendarMap | null>(
     null,
@@ -704,49 +718,85 @@ export default function Dashboard() {
     }
   }, [dashboardCampaign, showResult]);
 
-  const handleVideoScript = useCallback(async () => {
+  const runVideoGenerate = useCallback(
+    async (message: string, busyKey: string) => {
+      if (!dashboardCampaign) return;
+
+      setBusyAction(busyKey);
+      setVideoChatMessages((prev) => [
+        ...prev,
+        { role: "user", text: message },
+      ]);
+
+      try {
+        const res = await generateVideo({
+          message,
+          campaign_id: dashboardCampaign.id,
+        });
+        setVideoLastResult(res);
+
+        if (res.status === "error" && res.error_message) {
+          setVideoChatMessages((prev) => [
+            ...prev,
+            { role: "assistant", text: res.error_message! },
+          ]);
+          showResult("Video agent error", res.error_message);
+        } else {
+          const hook = res.video_plan?.script?.hook;
+          const summary = [
+            `Status: ${res.status}`,
+            res.video_plan?.concept,
+            hook ? `Hook: ${hook}` : null,
+          ]
+            .filter(Boolean)
+            .join("\n\n");
+          setVideoChatMessages((prev) => [
+            ...prev,
+            { role: "assistant", text: summary },
+          ]);
+        }
+      } catch (e) {
+        const err =
+          e instanceof Error ? e.message : "Something went wrong";
+        setVideoChatMessages((prev) => [
+          ...prev,
+          { role: "assistant", text: err },
+        ]);
+        showResult("Error", err);
+      } finally {
+        setBusyAction(null);
+      }
+    },
+    [dashboardCampaign, showResult],
+  );
+
+  const handleVideoScript = useCallback(() => {
     if (!dashboardCampaign) return;
+    void runVideoGenerate(
+      `Write a 30-second video script for ${dashboardCampaign.name}`,
+      "vscript",
+    );
+  }, [dashboardCampaign, runVideoGenerate]);
 
-    setBusyAction("vscript");
-
-    try {
-      const res = await quickActionBlogPost({
-        topic: `30-second video script for ${dashboardCampaign.name}`,
-        brand_id: dashboardCampaign.brand_id,
-      });
-
-      showResult("Video script", res.result);
-    } catch (e) {
-      showResult(
-        "Error",
-        e instanceof Error ? e.message : "Something went wrong",
-      );
-    } finally {
-      setBusyAction(null);
-    }
-  }, [dashboardCampaign, showResult]);
-
-  const handleVideoCreatorBrief = useCallback(async () => {
+  const handleVideoStoryboard = useCallback(() => {
     if (!dashboardCampaign) return;
+    void runVideoGenerate("Create detailed storyboard", "vstoryboard");
+  }, [dashboardCampaign, runVideoGenerate]);
 
-    setBusyAction("vbrief");
+  const handleVideoCreatorBrief = useCallback(() => {
+    if (!dashboardCampaign) return;
+    void runVideoGenerate("Write creator brief", "vbrief");
+  }, [dashboardCampaign, runVideoGenerate]);
 
-    try {
-      const res = await quickActionBlogPost({
-        topic: `Creator brief for ${dashboardCampaign.name}`,
-        brand_id: dashboardCampaign.brand_id,
-      });
-
-      showResult("Creator brief", res.result);
-    } catch (e) {
-      showResult(
-        "Error",
-        e instanceof Error ? e.message : "Something went wrong",
-      );
-    } finally {
-      setBusyAction(null);
-    }
-  }, [dashboardCampaign, showResult]);
+  const handleVideoChatSend = useCallback(
+    (message = videoDraft) => {
+      const trimmed = message.trim();
+      if (!trimmed || !dashboardCampaign) return;
+      setVideoDraft("");
+      void runVideoGenerate(trimmed, "videochat");
+    },
+    [videoDraft, dashboardCampaign, runVideoGenerate],
+  );
 
   const handleAnalyticsSummarize = useCallback(async () => {
     setBusyAction("asum");
@@ -1263,10 +1313,9 @@ export default function Dashboard() {
                   ) : activeAgentId === "video" ? (
                     <VideoPanels
                       busyAction={busyAction}
+                      lastResult={videoLastResult}
                       onScript={handleVideoScript}
-                      onStoryboard={() =>
-                        handleDemoAgentAction("video", "Create storyboard")
-                      }
+                      onStoryboard={handleVideoStoryboard}
                       onCreatorBrief={handleVideoCreatorBrief}
                     />
                   ) : (
@@ -1319,7 +1368,13 @@ export default function Dashboard() {
               onImageChatSend={handleImageChatSend}
               onImgGenerateVisual={handleImageGenerateVisual}
               onImgAssets={handleImageAssets}
+              videoChatMessages={videoChatMessages}
+              videoLastResult={videoLastResult}
+              videoDraft={videoDraft}
+              onVideoDraftChange={setVideoDraft}
+              onVideoChatSend={handleVideoChatSend}
               onVideoScript={handleVideoScript}
+              onVideoStoryboard={handleVideoStoryboard}
               onVideoBrief={handleVideoCreatorBrief}
               busyAction={busyAction}
             />
