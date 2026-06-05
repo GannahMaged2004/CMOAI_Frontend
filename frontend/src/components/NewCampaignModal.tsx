@@ -226,9 +226,13 @@ export function NewCampaignModal({
                     <SelectTrigger className="bg-white border-white/10 text-cosmic">
                       <SelectValue placeholder="Select a brand" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="border-white/10 bg-[#141826] text-white">
                       {brands.map((b) => (
-                        <SelectItem key={b.id} value={String(b.id)}>
+                        <SelectItem
+                          key={b.id}
+                          value={String(b.id)}
+                          className="text-white focus:bg-white/10 focus:text-white"
+                        >
                           {b.brand_name}
                         </SelectItem>
                       ))}

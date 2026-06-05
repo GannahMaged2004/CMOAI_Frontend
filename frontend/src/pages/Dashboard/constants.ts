@@ -4,6 +4,7 @@ import {
   Clapperboard,
   Image,
   LayoutDashboard,
+  Megaphone,
   PenLine,
   Sparkles,
 } from "lucide-react";
@@ -18,6 +19,15 @@ export const agents: Agent[] = [
     icon: LayoutDashboard,
     accent: "text-neonBlue",
     navSubtitle: "Campaign workspace",
+  },
+  {
+    id: "market",
+    name: "Market Planner",
+    shortName: "Planner",
+    description: "Business inputs, content pillars, posting cadence",
+    icon: Megaphone,
+    accent: "text-neonGreen",
+    navSubtitle: "Strategy output",
   },
   {
     id: "brand",
@@ -80,6 +90,11 @@ export const nextActions: Record<AgentId, string[]> = {
     "Create a 7-day launch plan",
     "Ask every agent for blockers",
     "Summarize campaign readiness",
+  ],
+  market: [
+    "Generate marketing strategy",
+    "Review content pillars",
+    "Plan posting schedule",
   ],
   brand: [
     "Refine positioning",

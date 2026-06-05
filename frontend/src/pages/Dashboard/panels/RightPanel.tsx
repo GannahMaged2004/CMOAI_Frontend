@@ -139,6 +139,10 @@ export function RightPanel({
       onDemoAction("analytics", action);
       return;
     }
+    if (activeAgent.id === "market") {
+      onDemoAction("market", action);
+      return;
+    }
     if (activeAgent.id === "brand") {
       onDemoAction("brand", action);
       return;

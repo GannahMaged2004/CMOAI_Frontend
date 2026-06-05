@@ -62,6 +62,26 @@ export function buildAgentSuggestions(
     ];
   }
 
+  if (agentId === "market") {
+    return [
+      {
+        title: "Planner draft",
+        description: `Turn ${brandName} into a weekly plan for ${audience}.`,
+        action: "Generate marketing strategy",
+      },
+      {
+        title: "Content pillars",
+        description: `Review whether the content mix matches ${industry} and ${value}.`,
+        action: "Review content pillars",
+      },
+      {
+        title: "Posting cadence",
+        description: `Map the weekly schedule before creative production starts.`,
+        action: "Plan posting schedule",
+      },
+    ];
+  }
+
   if (agentId === "calendar") {
     return [
       {
@@ -282,6 +302,43 @@ export function buildAgentDemoResponse(
     ].join("\n");
   }
 
+  if (agentId === "market") {
+    if (action.toLowerCase().includes("pillar")) {
+      return [
+        `Market planner review for ${name}`,
+        "",
+        "- Keep 4-5 content pillars so the team can repeat strong ideas without sounding repetitive.",
+        "- Mix aspiration, education, proof, and CTA moments each week.",
+        "- Use the audience language directly in hooks and headlines.",
+        "",
+        "Next move: approve the pillar mix, then pass the winning angles to Text and Image.",
+      ].join("\n");
+    }
+
+    if (action.toLowerCase().includes("schedule")) {
+      return [
+        `Posting schedule guidance for ${name}`,
+        "",
+        "- Start the week with education or inspiration.",
+        "- Put proof in the middle of the week before the strongest ask.",
+        "- Reserve Friday or Saturday for offer-led content.",
+        "- Keep one lighter engagement slot to learn what the audience responds to.",
+      ].join("\n");
+    }
+
+    return [
+      `Marketing strategy draft for ${name}`,
+      "",
+      `Goal: translate the campaign into a channel plan that feels specific to ${audience}.`,
+      "",
+      "Output:",
+      "- Business information summary",
+      "- Content pillars with formats and weekly frequency",
+      "- Recommended posting schedule across the selected platforms",
+      "- Closing note with next operational steps",
+    ].join("\n");
+  }
+
   if (agentId === "calendar") {
     return [
       `Calendar gap review for ${name}`,
@@ -362,6 +419,9 @@ export function getAgentDemoIntro(
   }
   if (agentId === "brand") {
     return `I can shape positioning, voice, and objections for ${name}, grounded in ${audience}.`;
+  }
+  if (agentId === "market") {
+    return `I can turn ${name} into a structured marketing plan with business inputs, content pillars, and a weekly posting cadence for ${audience}.`;
   }
   if (agentId === "calendar") {
     return `I can plan launch cadence, spot calendar gaps, and balance content timing for ${name}.`;

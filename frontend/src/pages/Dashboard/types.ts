@@ -20,6 +20,7 @@ export type DashboardNotification = {
 
 export type AgentId =
   | "orchestrator"
+  | "market"
   | "brand"
   | "calendar"
   | "text"

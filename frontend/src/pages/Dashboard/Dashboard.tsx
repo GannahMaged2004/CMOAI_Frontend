@@ -60,6 +60,7 @@ import { ResultDialog } from "./components/ResultDialog";
 import { MetricCard } from "./components/MetricCard";
 import { CampaignBrief } from "./components/CampaignBrief";
 import { OrchestratorPanel } from "./panels/OrchestratorPanel";
+import { MarketPlannerPanel } from "./panels/MarketPlannerPanel";
 import { BrandPanels } from "./panels/BrandPanels";
 import { CalendarPanels } from "./panels/CalendarPanels";
 import { TextPanels } from "./panels/TextPanels";
@@ -165,16 +166,32 @@ export default function Dashboard() {
 
     return brands.find((item) => item.id === selectedBrandId) ?? null;
   }, [brands, selectedBrandId]);
+  const isAllBrandsView = selectedBrandId === "all";
   const dashboardCampaign =
-    selectedBrandId === "all" || campaign?.brand_id === selectedBrandId
+    isAllBrandsView || campaign?.brand_id === selectedBrandId
       ? campaign
       : null;
-  const dashboardBrand = selectedBrandId === "all" ? brand : selectedBrand;
+  const dashboardBrand = isAllBrandsView ? brand : selectedBrand;
   const dashboardBrandAudience =
-    selectedBrandId === "all"
+    isAllBrandsView
       ? brandAudience
       : selectedBrand?.target_audience ?? null;
   const dashboardCampaignId = dashboardCampaign?.id ?? null;
+  const workspaceSummary = isAllBrandsView
+    ? `${brands.length} brands in workspace`
+    : dashboardCampaign?.name ?? "No active campaign";
+  const workspaceDetail = isAllBrandsView
+    ? `${filteredCampaigns.length} campaigns available`
+    : dashboardBrand?.industry?.trim() || "Brand workspace";
+  const headerBrandName = isAllBrandsView
+    ? "All brands"
+    : dashboardBrand?.brand_name ?? "CMO.ai";
+  const headerBrandLogo = isAllBrandsView ? logo : dashboardBrand?.logo_url || logo;
+  const headerBrandAlt = isAllBrandsView
+    ? "All brands"
+    : dashboardBrand?.brand_name
+      ? `${dashboardBrand.brand_name} logo`
+      : "Brand logo";
   const activeAgent = useMemo(
     () => agents.find((a) => a.id === activeAgentId) ?? agents[0],
     [activeAgentId],
@@ -395,13 +412,22 @@ export default function Dashboard() {
         });
       }
 
-      if (dashboardCampaign && !dashboardBrand) {
+      if (!isAllBrandsView && dashboardCampaign && !dashboardBrand) {
         items.push({
           id: "brand-missing",
           title: "Brand details need attention",
           detail:
             "Your campaign exists, but the brand context has not loaded cleanly yet.",
           tone: "warn",
+          actionLabel: "Open Brand",
+          actionType: "brand",
+        });
+      } else if (isAllBrandsView) {
+        items.push({
+          id: "brands-overview",
+          title: `${brands.length} brands in workspace`,
+          detail: "All brands view is active. Pick one brand to narrow the workspace.",
+          tone: "info",
           actionLabel: "Open Brand",
           actionType: "brand",
         });
@@ -442,9 +468,11 @@ export default function Dashboard() {
     }) as () => DashboardNotification[],
     [
       agentStatus,
+      brands.length,
       dashboardBrand,
       dashboardCampaign,
       campaigns.length,
+      isAllBrandsView,
       upcoming,
       upcomingError,
     ],
@@ -946,7 +974,7 @@ export default function Dashboard() {
 
         <main className="flex-1 min-w-0">
           <header className="border-b border-white/10 bg-[rgba(12,14,30,0.82)] px-4 py-5 backdrop-blur-xl md:px-6">
-            <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+            <div className="grid gap-5 xl:grid-cols-[minmax(0,1.1fr)_minmax(380px,0.9fr)] xl:items-start">
               <div className="min-w-0">
                 <p className="text-xs uppercase tracking-[0.18em] text-white/40">
                   Dashboard
@@ -973,119 +1001,132 @@ export default function Dashboard() {
                   ) : null}
                 </div>
 
-                <div className="flex flex-col gap-3 mt-2 md:flex-row md:items-center md:flex-wrap">
-                  <select
-                    aria-label="Active brand"
-                    value={selectedBrandId}
-                    onChange={(event) => {
-                      const value = event.target.value;
+                <div className="mt-4 max-w-[780px] rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02))] p-3 shadow-[0_20px_50px_rgba(8,10,24,0.28)]">
+                  <div className="grid gap-3 lg:grid-cols-2">
+                    <label className="space-y-1.5">
+                      <span className="block text-[11px] font-medium uppercase tracking-[0.18em] text-white/38">
+                        Brand
+                      </span>
+                      <select
+                        aria-label="Active brand"
+                        value={selectedBrandId}
+                        onChange={(event) => {
+                          const value = event.target.value;
 
-                      if (value === "all") {
-                        setSelectedBrandId("all");
-                        return;
-                      }
+                          if (value === "all") {
+                            setSelectedBrandId("all");
+                            return;
+                          }
 
-                      setSelectedBrandId(Number(value));
-                    }}
-                    className="w-full px-3 text-sm font-semibold bg-white border outline-none h-11 rounded-2xl border-white/10 text-cosmic md:w-72"
-                  >
-                    <option value="all">All brands</option>
+                          setSelectedBrandId(Number(value));
+                        }}
+                        className="h-12 w-full rounded-2xl border border-white/10 bg-white px-4 text-sm font-semibold text-cosmic outline-none"
+                      >
+                        <option value="all">All brands</option>
 
-                    {brands.map((item) => (
-                      <option key={item.id} value={item.id}>
-                        {item.brand_name}
-                      </option>
-                    ))}
-                  </select>
+                        {brands.map((item) => (
+                          <option key={item.id} value={item.id}>
+                            {item.brand_name}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
 
-                  <select
-                    aria-label="Active campaign"
-                    value={dashboardCampaign?.id ?? ""}
-                    onChange={(event) => {
-                      const v = event.target.value;
-                      if (v) setCampaignId(Number.parseInt(v, 10));
-                    }}
-                    disabled={!filteredCampaigns.length}
-                    className="w-full px-3 text-sm font-semibold bg-white border outline-none h-11 rounded-2xl border-white/10 text-cosmic md:w-72 disabled:opacity-50"
-                  >
-                    {!filteredCampaigns.length ? (
-                      <option value="">No campaigns</option>
-                    ) : (
-                      filteredCampaigns.map((item) => (
-                        <option key={item.id} value={item.id}>
-                          {item.name}
-                        </option>
-                      ))
-                    )}
-                  </select>
+                    <label className="space-y-1.5">
+                      <span className="block text-[11px] font-medium uppercase tracking-[0.18em] text-white/38">
+                        Campaign
+                      </span>
+                      <select
+                        aria-label="Active campaign"
+                        value={dashboardCampaign?.id ?? ""}
+                        onChange={(event) => {
+                          const v = event.target.value;
+                          if (v) setCampaignId(Number.parseInt(v, 10));
+                        }}
+                        disabled={!filteredCampaigns.length}
+                        className="h-12 w-full rounded-2xl border border-white/10 bg-white px-4 text-sm font-semibold text-cosmic outline-none disabled:opacity-50"
+                      >
+                        {!filteredCampaigns.length ? (
+                          <option value="">No campaigns</option>
+                        ) : (
+                          filteredCampaigns.map((item) => (
+                            <option key={item.id} value={item.id}>
+                              {item.name}
+                            </option>
+                          ))
+                        )}
+                      </select>
+                    </label>
+                  </div>
 
-                  <Button
-                    type="button"
-                    className="h-11 rounded-2xl bg-[linear-gradient(90deg,#7b61ff,#42d6ff)] px-4 text-cosmic shadow-[0_16px_30px_rgba(73,125,255,0.25)] hover:opacity-95"
-                    onClick={() => {
-                      setModalMode("campaign");
-                      setNewCampaignOpen(true);
-                    }}
-                  >
-                    <Plus className="size-4" />
-                    New Campaign
-                  </Button>
-
-                  <Button
-                    type="button"
-                    className="px-4 text-white border h-11 rounded-2xl border-white/10 bg-white/10 hover:bg-white/15"
-                    onClick={() => {
-                      setModalMode("brand");
-                      setNewCampaignOpen(true);
-                    }}
-                  >
-                    <Plus className="size-4" />
-                    New Brand
-                  </Button>
-
-                  {dashboardBrand ? (
+                  <div className="mt-3 flex flex-wrap gap-2">
                     <Button
                       type="button"
-                      className="px-4 text-red-200 h-11 rounded-2xl bg-red-500/10 hover:bg-red-500/20"
-                      onClick={() => void handleDeleteBrand()}
+                      className="h-11 rounded-2xl bg-[linear-gradient(90deg,#7b61ff,#42d6ff)] px-4 text-cosmic shadow-[0_16px_30px_rgba(73,125,255,0.25)] hover:opacity-95"
+                      onClick={() => {
+                        setModalMode("campaign");
+                        setNewCampaignOpen(true);
+                      }}
                     >
-                      Delete Brand
+                      <Plus className="size-4" />
+                      New Campaign
                     </Button>
-                  ) : null}
 
-                  {dashboardCampaign ? (
                     <Button
                       type="button"
-                      className="px-4 text-red-200 h-11 rounded-2xl bg-red-500/10 hover:bg-red-500/20"
-                      onClick={() => void handleDeleteCampaign()}
+                      className="h-11 rounded-2xl border border-white/10 bg-white/10 px-4 text-white hover:bg-white/15"
+                      onClick={() => {
+                        setModalMode("brand");
+                        setNewCampaignOpen(true);
+                      }}
                     >
-                      Delete Campaign
+                      <Plus className="size-4" />
+                      New Brand
                     </Button>
-                  ) : null}
+
+                    {!isAllBrandsView && dashboardBrand ? (
+                      <Button
+                        type="button"
+                        className="h-11 rounded-2xl bg-red-500/10 px-4 text-red-200 hover:bg-red-500/20"
+                        onClick={() => void handleDeleteBrand()}
+                      >
+                        Delete Brand
+                      </Button>
+                    ) : null}
+
+                    {dashboardCampaign ? (
+                      <Button
+                        type="button"
+                        className="h-11 rounded-2xl bg-red-500/10 px-4 text-red-200 hover:bg-red-500/20"
+                        onClick={() => void handleDeleteCampaign()}
+                      >
+                        Delete Campaign
+                      </Button>
+                    ) : null}
+                  </div>
                 </div>
               </div>
 
-              <div className="flex flex-col gap-3 xl:items-end">
+              <div className="flex flex-col gap-3">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
                   <div className="hidden min-w-[220px] items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.06] px-3 py-2 text-left shadow-[0_12px_30px_rgba(11,13,30,0.25)] md:flex">
                     <div className="flex items-center justify-center overflow-hidden border h-11 w-11 shrink-0 rounded-xl border-white/10 bg-white/10">
                       <img
-                        src={dashboardBrand?.logo_url || logo}
-                        alt={
-                          dashboardBrand?.brand_name
-                            ? `${dashboardBrand.brand_name} logo`
-                            : "Brand logo"
-                        }
+                        src={headerBrandLogo}
+                        alt={headerBrandAlt}
                         className="object-contain w-full h-full p-1"
                       />
                     </div>
 
                     <div className="min-w-0">
                       <p className="text-sm font-semibold text-white truncate">
-                        {dashboardBrand?.brand_name ?? "CMO.ai"}
+                        {headerBrandName}
                       </p>
                       <p className="text-xs truncate text-white/50">
-                        {dashboardCampaign?.name ?? "No active campaign"}
+                        {workspaceSummary}
+                      </p>
+                      <p className="text-[11px] uppercase tracking-[0.16em] text-white/30">
+                        {workspaceDetail}
                       </p>
                     </div>
                   </div>
@@ -1266,6 +1307,12 @@ export default function Dashboard() {
                       brandAudience={dashboardBrandAudience}
                       onPickAgent={setActiveAgentId}
                       onDemoAction={handleDemoAgentAction}
+                    />
+                  ) : activeAgentId === "market" ? (
+                    <MarketPlannerPanel
+                      campaign={dashboardCampaign}
+                      brand={dashboardBrand}
+                      brandAudience={dashboardBrandAudience}
                     />
                   ) : activeAgentId === "brand" ? (
                     <BrandPanels
