@@ -1,5 +1,6 @@
 ﻿import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useRef } from "react";
 import {
   Bell,
   CheckCircle2,
@@ -114,6 +115,7 @@ export default function Dashboard() {
     null,
   );
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const notificationsRef = useRef<HTMLDivElement | null>(null);
 
   const [textChatMessages, setTextChatMessages] =
     useState<ChatMessage[]>(getInitialTextChat());
@@ -376,6 +378,7 @@ export default function Dashboard() {
                 title: "Text agent is live",
                 detail: `Connected to ${agentStatus.provider} for real AI copy generation.`,
                 tone: "success",
+                showInBadge: false,
                 actionLabel: "Open Text",
                 actionType: "text",
               }
@@ -385,8 +388,34 @@ export default function Dashboard() {
                 detail:
                   "The text agent is using fallback output. Check your AI key before the demo.",
                 tone: "warn",
+                showInBadge: true,
                 actionLabel: "Open Text",
                 actionType: "text",
+              },
+        );
+      }
+
+      if (imageAgentStatus) {
+        items.push(
+          imageAgentStatus.image_backend_configured
+            ? {
+                id: "image-live",
+                title: "Image agent is ready",
+                detail: `Visual generation is configured with ${imageAgentStatus.image_backend}.`,
+                tone: "success",
+                showInBadge: false,
+                actionLabel: "Open Image",
+                actionType: "image",
+              }
+            : {
+                id: "image-config-missing",
+                title: "Image agent needs setup",
+                detail:
+                  "Image generation is not fully configured yet. Check backend image credentials before the demo.",
+                tone: "warn",
+                showInBadge: true,
+                actionLabel: "Open Image",
+                actionType: "image",
               },
         );
       }
@@ -397,6 +426,7 @@ export default function Dashboard() {
           title: "No campaign yet",
           detail: "Create your first campaign to unlock the agent workspace.",
           tone: "warn",
+          showInBadge: true,
           actionLabel: "New campaign",
           actionType: "new-campaign",
         });
@@ -405,10 +435,11 @@ export default function Dashboard() {
           id: "strategy-missing",
           title: "Strategy still missing",
           detail:
-            "Calendar planning will stay limited until this campaign has a linked strategy.",
+            "Market planning is ready, but this campaign still has no linked strategy record for calendar generation.",
           tone: "info",
-          actionLabel: "Open Calendar",
-          actionType: "calendar",
+          showInBadge: true,
+          actionLabel: "Open Planner",
+          actionType: "market",
         });
       }
 
@@ -419,15 +450,7 @@ export default function Dashboard() {
           detail:
             "Your campaign exists, but the brand context has not loaded cleanly yet.",
           tone: "warn",
-          actionLabel: "Open Brand",
-          actionType: "brand",
-        });
-      } else if (isAllBrandsView) {
-        items.push({
-          id: "brands-overview",
-          title: `${brands.length} brands in workspace`,
-          detail: "All brands view is active. Pick one brand to narrow the workspace.",
-          tone: "info",
+          showInBadge: true,
           actionLabel: "Open Brand",
           actionType: "brand",
         });
@@ -439,6 +462,7 @@ export default function Dashboard() {
             dashboardBrand.target_audience?.trim() ||
             "Add audience details to make the suggestions feel more tailored.",
           tone: "info",
+          showInBadge: false,
           actionLabel: "Open Brand",
           actionType: "brand",
         });
@@ -450,6 +474,7 @@ export default function Dashboard() {
           title: "Content queue needs a check",
           detail: upcomingError,
           tone: "warn",
+          showInBadge: true,
           actionLabel: "Open Calendar",
           actionType: "calendar",
         });
@@ -459,6 +484,7 @@ export default function Dashboard() {
           title: `${upcoming.length} items in the queue`,
           detail: "Your upcoming content is loaded and ready to review.",
           tone: "success",
+          showInBadge: false,
           actionLabel: "Open Calendar",
           actionType: "calendar",
         });
@@ -472,10 +498,16 @@ export default function Dashboard() {
       dashboardBrand,
       dashboardCampaign,
       campaigns.length,
+      imageAgentStatus,
       isAllBrandsView,
       upcoming,
       upcomingError,
     ],
+  );
+
+  const activeNotificationCount = useMemo(
+    () => notifications.filter((item) => item.showInBadge !== false).length,
+    [notifications],
   );
 
   const handleNotificationAction = useCallback(
@@ -488,13 +520,42 @@ export default function Dashboard() {
       }
 
       if (actionType === "brand") setActiveAgentId("brand");
+      if (actionType === "market") setActiveAgentId("market");
       if (actionType === "calendar") setActiveAgentId("calendar");
       if (actionType === "text") setActiveAgentId("text");
+      if (actionType === "image") setActiveAgentId("image");
 
       setNotificationsOpen(false);
     },
     [],
   );
+
+  useEffect(() => {
+    if (!notificationsOpen) return;
+
+    const handlePointerDown = (event: MouseEvent) => {
+      if (
+        notificationsRef.current &&
+        !notificationsRef.current.contains(event.target as Node)
+      ) {
+        setNotificationsOpen(false);
+      }
+    };
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setNotificationsOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("keydown", handleEscape);
+
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, [notificationsOpen]);
 
   const handleCalendarGenerate14 = useCallback(async () => {
     if (!dashboardCampaign?.strategy_id) {
@@ -973,7 +1034,7 @@ export default function Dashboard() {
         </aside>
 
         <main className="flex-1 min-w-0">
-          <header className="border-b border-white/10 bg-[rgba(12,14,30,0.82)] px-4 py-5 backdrop-blur-xl md:px-6">
+          <header className="relative z-40 border-b border-white/10 bg-[rgba(12,14,30,0.82)] px-4 py-5 backdrop-blur-xl md:px-6">
             <div className="grid gap-5 xl:grid-cols-[minmax(0,1.1fr)_minmax(380px,0.9fr)] xl:items-start">
               <div className="min-w-0">
                 <p className="text-xs uppercase tracking-[0.18em] text-white/40">
@@ -1131,17 +1192,19 @@ export default function Dashboard() {
                     </div>
                   </div>
 
-                  <div className="relative">
+                  <div className="relative" ref={notificationsRef}>
                     <button
                       type="button"
                       onClick={() => setNotificationsOpen((open) => !open)}
+                      aria-expanded={notificationsOpen}
+                      aria-haspopup="dialog"
                       className="flex h-12 items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.06] px-4 text-sm font-medium text-white shadow-[0_12px_30px_rgba(11,13,30,0.25)] transition hover:bg-white/[0.1]"
                     >
                       <span className="relative inline-flex">
                         <Bell className="size-4" />
-                        {notifications.length ? (
+                        {activeNotificationCount ? (
                           <span className="absolute -right-1.5 -top-1.5 inline-flex min-h-4 min-w-4 items-center justify-center rounded-full bg-neonPink px-1 text-[10px] font-semibold text-white">
-                            {notifications.length}
+                            {activeNotificationCount}
                           </span>
                         ) : null}
                       </span>
@@ -1149,23 +1212,27 @@ export default function Dashboard() {
                     </button>
 
                     {notificationsOpen ? (
-                      <div className="absolute right-0 top-14 z-30 w-[min(92vw,360px)] rounded-2xl border border-white/10 bg-[rgba(13,16,30,0.98)] p-3 shadow-[0_24px_60px_rgba(6,8,18,0.55)] backdrop-blur-xl">
-                        <div className="flex items-center justify-between px-1 mb-2">
+                      <div
+                        role="dialog"
+                        aria-label="Notifications"
+                        className="absolute right-0 top-14 z-[120] flex max-h-[min(70vh,560px)] w-[min(92vw,380px)] flex-col overflow-hidden rounded-2xl border border-white/10 bg-[rgba(13,16,30,0.98)] shadow-[0_24px_60px_rgba(6,8,18,0.55)] backdrop-blur-xl"
+                      >
+                        <div className="mb-2 flex items-center justify-between border-b border-white/10 px-4 py-3">
                           <div>
                             <p className="text-sm font-semibold text-white">
                               Notifications
                             </p>
                             <p className="text-xs text-white/45">
-                              Live setup and campaign signals
+                              Actionable alerts and workspace status
                             </p>
                           </div>
 
                           <span className="rounded-full border border-white/10 bg-white/5 px-2 py-1 text-[11px] text-white/60">
-                            {notifications.length} items
+                            {activeNotificationCount} active
                           </span>
                         </div>
 
-                        <div className="space-y-2">
+                        <div className="space-y-2 overflow-y-auto px-3 pb-3">
                           {notifications.length ? (
                             notifications.map((item) => (
                               <div
@@ -1188,7 +1255,7 @@ export default function Dashboard() {
                                       {item.title}
                                     </p>
 
-                                    <p className="mt-1 text-xs leading-5 text-white/60">
+                                    <p className="mt-1 text-xs leading-5 break-words text-white/60">
                                       {item.detail}
                                     </p>
 

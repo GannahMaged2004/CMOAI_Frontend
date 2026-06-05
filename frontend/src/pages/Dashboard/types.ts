@@ -14,8 +14,15 @@ export type DashboardNotification = {
   title: string;
   detail: string;
   tone: "info" | "warn" | "success";
+  showInBadge?: boolean;
   actionLabel?: string;
-  actionType?: "new-campaign" | "brand" | "calendar" | "text";
+  actionType?:
+    | "new-campaign"
+    | "brand"
+    | "calendar"
+    | "text"
+    | "market"
+    | "image";
 };
 
 export type AgentId =

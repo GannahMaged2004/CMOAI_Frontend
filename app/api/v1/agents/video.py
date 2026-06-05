@@ -96,7 +96,21 @@ async def generate_video(
     )
 
     try:
-        output = await asyncio.to_thread(run_video_agent, prompt)
+        output = await asyncio.to_thread(
+            run_video_agent,
+            prompt,
+            brand={
+                "brand_name": brand.brand_name if brand else "",
+                "industry": brand.industry if brand else "",
+                "target_audience": brand.target_audience if brand else "",
+                "tone_of_voice": brand.tone_of_voice if brand else "professional",
+            },
+            campaign={
+                "name": campaign.name,
+                "description": campaign.description,
+            },
+            user_message=data.message,
+        )
     except Exception as e:
         raise HTTPException(
             status_code=500,

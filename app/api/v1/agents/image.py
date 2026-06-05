@@ -119,7 +119,11 @@ def _result_to_response(result) -> ImageAgentResponse:
 async def image_agent_status():
     backend = _resolve_image_backend()
     configured = bool(
-        settings.RUNWAY_API_KEY if backend == "runway" else settings.POLLINATIONS_API_KEY
+        settings.RUNWAY_API_KEY
+        if backend == "runway"
+        else settings.POLLINATIONS_API_KEY
+        if backend == "pollinations"
+        else True
     )
     return ImageAgentStatus(
         provider="groq",

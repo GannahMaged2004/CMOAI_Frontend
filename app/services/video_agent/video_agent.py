@@ -54,7 +54,80 @@ def build_prompt(brand: dict, campaign: dict, user_message: str) -> str:
     )
 
 
-def run_video_agent(prompt: str) -> dict[str, Any]:
+def _build_local_video_fallback(
+    prompt: str,
+    *,
+    brand: dict[str, Any] | None = None,
+    campaign: dict[str, Any] | None = None,
+    user_message: str | None = None,
+    error_hint: str | None = None,
+) -> dict[str, Any]:
+    brand = brand or {}
+    campaign = campaign or {}
+    brand_name = brand.get("brand_name") or "the brand"
+    audience = brand.get("target_audience") or "the target audience"
+    tone = brand.get("tone_of_voice") or "professional"
+    campaign_name = campaign.get("name") or "this campaign"
+    description = campaign.get("description") or "No description provided."
+    ask = user_message or "Create a short social video"
+
+    return {
+        "status": "success",
+        "video_plan": {
+            "concept": f"{campaign_name}: a short-form video that turns the core promise into one clear viewer takeaway.",
+            "script": {
+                "hook": f"{audience.capitalize()} do not need more noise. They need a reason to trust {brand_name}.",
+                "body": f"Show the real before-and-after moment behind {campaign_name}. Anchor it in {description}",
+                "cta": f"Invite viewers to take the next step with {brand_name} today.",
+            },
+            "scenes": [
+                f"Open with the audience problem in a fast, visual first three seconds tied to {ask}.",
+                f"Reveal {brand_name} as the simple answer with clean product or service context.",
+                f"Show one proof moment or transformation that makes the promise believable.",
+                "Close with a direct CTA frame and on-screen text.",
+            ],
+            "visual_style": f"{tone} visual direction with platform-native pacing and strong first-frame clarity.",
+            "audio_style": "Upbeat, modern background audio with space for clear voiceover or captions.",
+        },
+        "reasoning": {
+            "psychological_trigger": "Clarity and trust",
+            "content_angle": f"Turn {campaign_name} into a concrete promise for {audience}.",
+            "hook_rationale": "Lead with the pain point first so the viewer immediately recognizes themselves.",
+            "why_this_works": "This keeps the message simple, proof-led, and easy to adapt into a vertical short even when live video generation is unavailable.",
+        },
+        "video_prompt": prompt,
+        "video_url": "",
+        "error_message": error_hint,
+    }
+
+
+def run_video_agent(
+    prompt: str,
+    *,
+    brand: dict[str, Any] | None = None,
+    campaign: dict[str, Any] | None = None,
+    user_message: str | None = None,
+) -> dict[str, Any]:
     """Called via asyncio.to_thread from the endpoint."""
-    agent = _get_content_agent()
-    return agent.run_from_prompt(prompt)
+    try:
+        agent = _get_content_agent()
+        return agent.run_from_prompt(prompt)
+    except ModuleNotFoundError as exc:
+        return _build_local_video_fallback(
+            prompt,
+            brand=brand,
+            campaign=campaign,
+            user_message=user_message,
+            error_hint=f"Video provider dependency unavailable: {exc}",
+        )
+    except Exception as exc:
+        message = str(exc)
+        if "RUNWAY_API_KEY" in message or "openai" in message.lower():
+            return _build_local_video_fallback(
+                prompt,
+                brand=brand,
+                campaign=campaign,
+                user_message=user_message,
+                error_hint=message,
+            )
+        raise

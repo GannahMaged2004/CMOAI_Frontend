@@ -358,7 +358,7 @@ def _resolve_image_backend() -> str:
         return "runway"
     if POLLINATIONS_API_KEY:
         return "pollinations"
-    return "runway"
+    return "local-fallback"
 
 
 class RunwayImageGenerator:
@@ -553,7 +553,75 @@ def _build_image_generator():
     backend = _resolve_image_backend()
     if backend == "runway":
         return RunwayImageGenerator(), "runway"
-    return PollinationsImageGenerator(), "pollinations"
+    if backend == "pollinations":
+        return PollinationsImageGenerator(), "pollinations"
+    return LocalFallbackImageGenerator(), "local-fallback"
+
+
+class LocalFallbackImageGenerator:
+
+    @staticmethod
+    def _hex_to_rgb(hex_color: str) -> tuple[int, int, int]:
+        raw = (hex_color or "#2563EB").lstrip("#")
+        if len(raw) != 6:
+            raw = "2563EB"
+        return tuple(int(raw[i:i+2], 16) for i in (0, 2, 4))
+
+    def generate_and_save(self, prompt: str, image_id: str, size: ImageSize) -> tuple:
+        width, height = map(int, size.value.split("x"))
+        path = OUTPUT_DIR / (image_id + ".png")
+
+        image = Image.new("RGB", (width, height), "#0F172A")
+        draw = ImageDraw.Draw(image)
+
+        primary = self._hex_to_rgb("#2563EB")
+        secondary = self._hex_to_rgb("#7C3AED")
+        for y in range(height):
+            mix = y / max(height - 1, 1)
+            color = tuple(
+                int(primary[i] * (1 - mix) + secondary[i] * mix) for i in range(3)
+            )
+            draw.line([(0, y), (width, y)], fill=color)
+
+        overlay_margin = max(16, width // 24)
+        panel_top = height // 2 - height // 6
+        panel_bottom = height - overlay_margin
+        draw.rounded_rectangle(
+            [overlay_margin, panel_top, width - overlay_margin, panel_bottom],
+            radius=max(18, width // 18),
+            fill=(8, 15, 29),
+        )
+
+        title_font = LogoOverlay._load_font(max(18, width // 16))
+        body_font = LogoOverlay._load_font(max(12, width // 28))
+
+        title = "CMO.ai image preview"
+        detail = prompt[:140] + ("..." if len(prompt) > 140 else "")
+        note = "Fallback image generated locally because no external image backend is configured."
+
+        draw.text(
+            (overlay_margin * 2, panel_top + overlay_margin),
+            title,
+            fill=(255, 255, 255),
+            font=title_font,
+        )
+        draw.multiline_text(
+            (overlay_margin * 2, panel_top + overlay_margin * 2 + 32),
+            detail,
+            fill=(226, 232, 240),
+            font=body_font,
+            spacing=6,
+        )
+        draw.multiline_text(
+            (overlay_margin * 2, panel_bottom - overlay_margin * 3),
+            note,
+            fill=(191, 219, 254),
+            font=body_font,
+            spacing=5,
+        )
+
+        image.save(path)
+        return str(path), "local-fallback"
 
 
 # ── Main Agent ────────────────────────────────────────────────
