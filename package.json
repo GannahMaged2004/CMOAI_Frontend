@@ -1,0 +1,13 @@
+{
+  "name": "cmo-ai-root",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "build": "npm --prefix frontend run build",
+    "dev": "npm --prefix frontend run dev",
+    "install:frontend": "npm --prefix frontend install"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
