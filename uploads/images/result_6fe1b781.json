@@ -1,0 +1,26 @@
+{
+  "request_id": "6fe1b781",
+  "brand_name": "BookStore",
+  "campaign_goal": "Create a premium summer campaign visual for Book Summer with a bold hero composition and readable sale headline. Context: It's a book sale 80% off",
+  "images": [
+    {
+      "image_id": "6fe1b781-v1",
+      "request_id": "6fe1b781",
+      "local_path": "uploads\\images\\6fe1b781-v1.png",
+      "prompt_used": "\"Generate a modern, professional BookStore summer sale ad: a bold, stacked collection of books in #2563EB and #7C3AED, with natural lighting, high contrast, and a clean composition, featuring a single focal point and a readable '80% Off' headline, on a bright and vibrant Instagram-friendly background.\"",
+      "ad_copy": "Book Summer with up to 80% off",
+      "platform": "instagram",
+      "size": "512x512",
+      "model_used": "local-fallback",
+      "logo_applied": true,
+      "metadata": {
+        "brand": "BookStore",
+        "campaign_goal": "Create a premium summer campaign visual for Book Summer with a bold hero composition and readable sale headline. Context: It's a book sale 80% off",
+        "variation": 0
+      }
+    }
+  ],
+  "ab_test_ready": false,
+  "generation_time_sec": 0.86,
+  "knowledge_context": "Platform rules: Instagram ads: use bright vibrant colors, high contrast. Keep composition clean with single focal point. Lifestyle imagery with natural lighting works best.\nIndustry tips: Clean composition, brand colors dominant, single focal point, professional lighting."
+}

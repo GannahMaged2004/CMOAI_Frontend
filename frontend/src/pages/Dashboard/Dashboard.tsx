@@ -23,6 +23,7 @@ import {
   getAnalyticsOverview,
 } from "../../services/analyticsService";
 import { listAssets } from "../../services/assetsService";
+import { generateBrandGuidance } from "../../services/brandAgentService";
 import { getContentCalendar } from "../../services/contentCalendarService";
 import {
   generateContent,
@@ -37,16 +38,16 @@ import { getDashboardUpcoming } from "../../services/dashboardService";
 import type {
   BrandOut,
   CampaignOut,
+  ChannelBreakdown,
   ContentAgentPlatform,
   ContentAgentStatus,
   ContentAgentType,
   ContentCalendarMap,
-  TextAgentResponse,
+  ImageAgentPlatform,
   ImageAgentResponse,
   ImageAgentStatus,
-  ImageAgentPlatform,
+  TextAgentResponse,
   VideoAgentResponse,
-  ChannelBreakdown,
 } from "../../types/api";
 
 import { agents, nextActions } from "./constants";
@@ -80,6 +81,9 @@ const getInitialTextChat = (): ChatMessage[] => [
 const getChatStorageKey = (id: number | null | undefined) =>
   id ? `cmo-text-chat-${id}` : "cmo-text-chat-empty";
 
+const toLocalDateKey = (date: Date) =>
+  `${date.getFullYear()}-${`${date.getMonth() + 1}`.padStart(2, "0")}-${`${date.getDate()}`.padStart(2, "0")}`;
+
 export default function Dashboard() {
   const navigate = useNavigate();
 
@@ -92,6 +96,7 @@ export default function Dashboard() {
     brand,
     brandAudience,
     registerNewCampaign,
+    refresh,
   } = useCampaign();
 
   const [activeAgentId, setActiveAgentId] = useState<AgentId>("orchestrator");
@@ -179,6 +184,31 @@ export default function Dashboard() {
       ? brandAudience
       : selectedBrand?.target_audience ?? null;
   const dashboardCampaignId = dashboardCampaign?.id ?? null;
+  const refreshUpcoming = useCallback(async () => {
+    if (!dashboardCampaignId) {
+      setUpcoming(null);
+      setUpcomingError(null);
+      return;
+    }
+
+    setUpcomingLoading(true);
+    setUpcomingError(null);
+
+    try {
+      const items = await getDashboardUpcoming({
+        campaign_id: dashboardCampaignId,
+      });
+      setUpcoming(items);
+    } catch (e) {
+      setUpcomingError(
+        e instanceof Error ? e.message : "Something went wrong",
+      );
+      setUpcoming(null);
+    } finally {
+      setUpcomingLoading(false);
+    }
+  }, [dashboardCampaignId]);
+
   const workspaceSummary = isAllBrandsView
     ? `${brands.length} brands in workspace`
     : dashboardCampaign?.name ?? "No active campaign";
@@ -283,24 +313,20 @@ export default function Dashboard() {
   }, [dashboardCampaignId, textChatMessages]);
 
   useEffect(() => {
-    if (!dashboardCampaignId) {
-      setUpcoming(null);
-      return;
-    }
+    void refreshUpcoming();
+  }, [refreshUpcoming]);
 
-    setUpcomingLoading(true);
-    setUpcomingError(null);
+  useEffect(() => {
+    if (!dashboardCampaignId) return;
 
-    void getDashboardUpcoming()
-      .then(setUpcoming)
-      .catch((e) => {
-        setUpcomingError(
-          e instanceof Error ? e.message : "Something went wrong",
-        );
-        setUpcoming(null);
-      })
-      .finally(() => setUpcomingLoading(false));
-  }, [dashboardCampaignId]);
+    const intervalId = window.setInterval(() => {
+      void refreshUpcoming();
+    }, 20000);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, [dashboardCampaignId, refreshUpcoming]);
 
   useEffect(() => {
     void getBrands()
@@ -569,13 +595,46 @@ export default function Dashboard() {
 
     try {
       const now = new Date();
-      const data = await getContentCalendar({
-        strategy_id: dashboardCampaign.strategy_id,
+      const end = new Date(now);
+      end.setDate(end.getDate() + 13);
+
+      const currentMonth = {
         month: now.getMonth() + 1,
         year: now.getFullYear(),
-      });
+      };
+      const needsNextMonth =
+        end.getMonth() !== now.getMonth() || end.getFullYear() !== now.getFullYear();
 
-      setCalendarData(data);
+      const [currentData, nextData] = await Promise.all([
+        getContentCalendar({
+          strategy_id: dashboardCampaign.strategy_id,
+          month: currentMonth.month,
+          year: currentMonth.year,
+        }),
+        needsNextMonth
+          ? getContentCalendar({
+              strategy_id: dashboardCampaign.strategy_id,
+              month: end.getMonth() + 1,
+              year: end.getFullYear(),
+            })
+          : Promise.resolve({}),
+      ]);
+
+      const startKey = toLocalDateKey(now);
+      const endKey = toLocalDateKey(end);
+      const merged = { ...currentData, ...nextData };
+      const filteredEntries = Object.entries(merged).filter(
+        ([date]) => date >= startKey && date <= endKey,
+      );
+
+      setCalendarData(
+        Object.fromEntries(filteredEntries) as ContentCalendarMap,
+      );
+      if (!filteredEntries.length) {
+        setCalendarMessage(
+          "No planned posts yet for the next 14 days. Generate the planner strategy again to seed the calendar.",
+        );
+      }
       setChannelsView(null);
     } catch (e) {
       setCalendarMessage(
@@ -594,6 +653,11 @@ export default function Dashboard() {
     try {
       const rows = await getAnalyticsChannels();
       setChannelsView(rows);
+      if (!rows.length) {
+        setCalendarMessage(
+          "Channel performance is still empty. Generate the planner strategy to seed initial calendar posts and metrics.",
+        );
+      }
       setCalendarData(null);
     } catch (e) {
       setCalendarMessage(
@@ -604,6 +668,34 @@ export default function Dashboard() {
       setBusyAction(null);
     }
   }, []);
+
+  const runBrandGenerate = useCallback(
+    async (action: string, busyKey: string) => {
+      if (!dashboardBrand) {
+        showResult("Brand Coaching", "No active brand is selected.");
+        return;
+      }
+
+      setBusyAction(busyKey);
+
+      try {
+        const res = await generateBrandGuidance({
+          brand_id: dashboardBrand.id,
+          campaign_id: dashboardCampaign?.id ?? null,
+          action,
+        });
+        showResult(`Brand Coaching: ${action}`, res.output);
+      } catch (e) {
+        showResult(
+          "Brand Coaching Error",
+          e instanceof Error ? e.message : "Something went wrong",
+        );
+      } finally {
+        setBusyAction(null);
+      }
+    },
+    [dashboardBrand, dashboardCampaign?.id, showResult],
+  );
 
   const runTextGenerate = useCallback(
     async (
@@ -914,20 +1006,21 @@ export default function Dashboard() {
 
   const handleDemoAgentAction = useCallback(
     (agentId: AgentId, action: string) => {
+      if (agentId === "brand") {
+        const busyKey = `brand:${action}`;
+        void runBrandGenerate(action, busyKey);
+        return;
+      }
+
       const agentName =
         agents.find((agent) => agent.id === agentId)?.name ?? "Agent";
 
       showResult(
         `${agentName}: ${action}`,
-        buildAgentDemoResponse(
-          agentId,
-          action,
-          dashboardCampaign,
-          dashboardBrandAudience,
-        ),
+        buildAgentDemoResponse(agentId, action, dashboardCampaign, dashboardBrandAudience),
       );
     },
-    [dashboardBrandAudience, dashboardCampaign, showResult],
+    [dashboardBrandAudience, dashboardCampaign, runBrandGenerate, showResult],
   );
 
   if (campaignLoading && !dashboardCampaign && campaigns.length === 0) {
@@ -1380,11 +1473,16 @@ export default function Dashboard() {
                       campaign={dashboardCampaign}
                       brand={dashboardBrand}
                       brandAudience={dashboardBrandAudience}
+                      onStrategyLinked={() => {
+                        void refresh();
+                        void refreshUpcoming();
+                      }}
                     />
                   ) : activeAgentId === "brand" ? (
                     <BrandPanels
                       campaign={dashboardCampaign}
                       brandAudience={dashboardBrandAudience}
+                      busyAction={busyAction}
                       onDemoAction={handleDemoAgentAction}
                     />
                   ) : activeAgentId === "calendar" ? (

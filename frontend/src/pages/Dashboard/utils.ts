@@ -5,6 +5,7 @@ import type {
   ImageAgentResponse,
   TextAgentResponse,
 } from "../../types/api";
+import { resolveBackendUrl } from "../../lib/env";
 import type { AgentId, AgentSuggestion } from "./types";
 
 export function buildAgentSuggestions(
@@ -468,18 +469,21 @@ export function formatTextAgentResponse(res: TextAgentResponse): string {
 
 /** Served by FastAPI StaticFiles; proxied in Vite dev via /uploads. */
 export function resolveUploadUrl(imageUrl: string): string {
-  if (imageUrl.startsWith("http://") || imageUrl.startsWith("https://")) {
-    return imageUrl;
-  }
-  return imageUrl.startsWith("/") ? imageUrl : `/${imageUrl}`;
+  return resolveBackendUrl(imageUrl);
 }
 
 export function formatImageAgentResponse(res: ImageAgentResponse): string {
+  const fallbackNote = res.images.find(
+    (img) => typeof img.metadata?.fallback_reason === "string",
+  )?.metadata?.fallback_reason;
   const lines = [
     `Generated ${res.images.length} image(s) in ${res.generation_time_sec}s.`,
   ];
   if (res.images[0]?.ad_copy) {
     lines.push(`Ad copy: ${res.images[0].ad_copy}`);
+  }
+  if (typeof fallbackNote === "string" && fallbackNote) {
+    lines.push(`Fallback: ${fallbackNote}`);
   }
   for (const img of res.images) {
     lines.push(

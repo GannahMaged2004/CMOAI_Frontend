@@ -1,0 +1,42 @@
+{
+  "request_id": "2085e7ac",
+  "brand_name": "Gannah's Book Haul",
+  "campaign_goal": "A/B test ad creatives for Summer Sale. Context: Book sale 50% off",
+  "images": [
+    {
+      "image_id": "2085e7ac-v1",
+      "request_id": "2085e7ac",
+      "local_path": "uploads\\images\\2085e7ac-v1.png",
+      "prompt_used": "\"Generate a modern, professional image for Gannah's Book Haul Summer Sale: a smiling child reading a book outdoors with natural lighting, #2563EB and #7C3AED dominant, high contrast, clean composition, single focal point on the book with 50% off tag.\"",
+      "ad_copy": "50% Off: Summer Sale Now",
+      "platform": "instagram",
+      "size": "512x512",
+      "model_used": "runway-gen4_image",
+      "logo_applied": true,
+      "metadata": {
+        "brand": "Gannah's Book Haul",
+        "campaign_goal": "A/B test ad creatives for Summer Sale. Context: Book sale 50% off",
+        "variation": 0
+      }
+    },
+    {
+      "image_id": "2085e7ac-v2",
+      "request_id": "2085e7ac",
+      "local_path": "uploads\\images\\2085e7ac-v2.png",
+      "prompt_used": "\"A warm golden-lit, modern bookshelf with a single stack of books, 50% off sale sign, against a bright #2563EB background, accents of #7C3AED, clean composition, high contrast, natural lighting, professional tone, single focal point, for Gannah's Book Haul Summer Sale Instagram ad.\"",
+      "ad_copy": "50% Off: Summer Sale Now",
+      "platform": "instagram",
+      "size": "512x512",
+      "model_used": "runway-gen4_image",
+      "logo_applied": true,
+      "metadata": {
+        "brand": "Gannah's Book Haul",
+        "campaign_goal": "A/B test ad creatives for Summer Sale. Context: Book sale 50% off",
+        "variation": 1
+      }
+    }
+  ],
+  "ab_test_ready": true,
+  "generation_time_sec": 70.41,
+  "knowledge_context": "Platform rules: Instagram ads: use bright vibrant colors, high contrast. Keep composition clean with single focal point. Lifestyle imagery with natural lighting works best.\nIndustry tips: Clean composition, brand colors dominant, single focal point, professional lighting."
+}

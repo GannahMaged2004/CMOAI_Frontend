@@ -1,0 +1,26 @@
+{
+  "request_id": "ee6aecac",
+  "brand_name": "Gannah's Makeup",
+  "campaign_goal": "Create an Instagram product visual for Eid lip gloss launch. Context: creating different shades of lipgloss colors for eid",
+  "images": [
+    {
+      "image_id": "ee6aecac-v1",
+      "request_id": "ee6aecac",
+      "local_path": "uploads\\images\\ee6aecac-v1.png",
+      "prompt_used": "\"Eid lip gloss on a young GenZ hand, soft natural light, #2563EB and #7C3AED dominant, modern and clean style, vibrant and professional mood, centered composition with gloss as focal point.\"",
+      "ad_copy": "Elevate Eid with Gannah's Vibrant Lip Gloss Collection",
+      "platform": "instagram",
+      "size": "512x512",
+      "model_used": "local-fallback",
+      "logo_applied": true,
+      "metadata": {
+        "brand": "Gannah's Makeup",
+        "campaign_goal": "Create an Instagram product visual for Eid lip gloss launch. Context: creating different shades of lipgloss colors for eid",
+        "variation": 0
+      }
+    }
+  ],
+  "ab_test_ready": false,
+  "generation_time_sec": 1.39,
+  "knowledge_context": "Platform rules: Instagram ads: use bright vibrant colors, high contrast. Keep composition clean with single focal point. Lifestyle imagery with natural lighting works best.\nIndustry tips: Clean composition, brand colors dominant, single focal point, professional lighting."
+}

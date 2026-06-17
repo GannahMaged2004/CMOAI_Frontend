@@ -29,6 +29,7 @@ class CampaignUpdate(BaseModel):
     description: Optional[str] = None
     start_date: Optional[datetime] = None
     status: Optional[CampaignStatus] = None
+    strategy_id: Optional[int] = None
 
 class CampaignStatusUpdate(BaseModel):
     status: CampaignStatus

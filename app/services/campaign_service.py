@@ -67,6 +67,18 @@ async def update_campaign(campaign_id: int, data: CampaignUpdate, user_id: int, 
     campaign = await verify_campaign_access(db, campaign_id, user_id)
     
     update_data = data.model_dump(exclude_unset=True)
+    if "strategy_id" in update_data and update_data["strategy_id"] is not None:
+        stmt = select(MarketingStrategy).where(
+            MarketingStrategy.id == update_data["strategy_id"],
+            MarketingStrategy.brand_id == campaign.brand_id,
+        )
+        result = await db.execute(stmt)
+        if not result.scalar_one_or_none():
+            raise HTTPException(
+                status_code=400,
+                detail="Strategy does not belong to the campaign's brand",
+            )
+
     for key, value in update_data.items():
         setattr(campaign, key, value)
         

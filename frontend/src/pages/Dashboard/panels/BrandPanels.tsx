@@ -8,10 +8,12 @@ import { BriefStat } from "../components/CampaignBrief";
 export function BrandPanels({
   campaign,
   brandAudience,
+  busyAction,
   onDemoAction,
 }: {
   campaign: CampaignOut;
   brandAudience: string | null;
+  busyAction: string | null;
   onDemoAction: (agentId: AgentId, action: string) => void;
 }) {
   const audience = brandAudience?.trim() || "the campaign audience";
@@ -39,7 +41,7 @@ export function BrandPanels({
             <ActionRow
               key={action}
               label={action}
-              loading={false}
+              loading={busyAction === `brand:${action}`}
               onClick={() => onDemoAction("brand", action)}
             />
           ))}

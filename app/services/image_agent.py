@@ -46,6 +46,32 @@ class ImageGenerationError(Exception):
     """Raised when the image backend cannot produce an image."""
 
 
+def _should_retry_with_local_fallback(exc: ImageGenerationError) -> bool:
+    message = str(exc).lower()
+    fallback_markers = (
+        "not have enough credits",
+        "enough credits",
+        "insufficient credit",
+        "quota",
+        "billing",
+        "payment required",
+        "subscription",
+    )
+    return any(marker in message for marker in fallback_markers)
+
+
+def _build_fallback_note(backend: str, exc: ImageGenerationError) -> str:
+    provider = "image provider"
+    if backend == "runway":
+        provider = "Runway"
+    elif backend == "pollinations":
+        provider = "Pollinations"
+    return (
+        f"{provider} could not generate this image because credits or billing "
+        f"were unavailable. A local preview was created instead. ({exc})"
+    )
+
+
 # ── Enums ─────────────────────────────────────────────────────
 
 class AdPlatform(str, Enum):
@@ -633,18 +659,52 @@ class ImageGenerationAgent:
         self.llm     = GroqLLM()
         self.builder = ImagePromptBuilder(self.llm)
         self.gen, self.image_backend = _build_image_generator()
+        self.local_fallback_gen = LocalFallbackImageGenerator()
         self.logo    = LogoOverlay()
+
+    def _generate_image(
+        self,
+        prompt: str,
+        image_id: str,
+        size: ImageSize,
+    ) -> tuple[tuple[str, str], str | None]:
+        try:
+            local_path, model_used = self.gen.generate_and_save(prompt, image_id, size)
+            return (local_path, model_used), None
+        except ImageGenerationError as exc:
+            if self.image_backend == "local-fallback" or not _should_retry_with_local_fallback(exc):
+                raise
+
+            fallback_note = _build_fallback_note(self.image_backend, exc)
+            logger.warning(
+                "Image generation failed on %s; using local fallback instead: %s",
+                self.image_backend,
+                exc,
+            )
+            local_path, model_used = self.local_fallback_gen.generate_and_save(
+                prompt,
+                image_id,
+                size,
+            )
+            return (local_path, model_used), fallback_note
 
     def run(self, request: ImageRequest) -> ImageGenerationResult:
         start   = time.time()
         context = self.kb.get_context(request.platform.value, request.brand.industry)
         ad_copy = self.builder.build_ad_copy(request)
         images  = []
+        fallback_notes = []
 
         for i in range(request.num_variations):
             image_id   = request.request_id + "-v" + str(i + 1)
             prompt     = self.builder.build_image_prompt(request, context, variation_index=i)
-            local_path, model_used = self.gen.generate_and_save(prompt, image_id, request.image_size)
+            (local_path, model_used), fallback_note = self._generate_image(
+                prompt,
+                image_id,
+                request.image_size,
+            )
+            if fallback_note and fallback_note not in fallback_notes:
+                fallback_notes.append(fallback_note)
             logo_applied = False
             if request.logo.enabled:
                 local_path   = self.logo.apply(local_path, request.logo, request.brand)
@@ -663,6 +723,8 @@ class ImageGenerationAgent:
                     "brand":         request.brand.brand_name,
                     "campaign_goal": request.campaign_goal,
                     "variation":     i,
+                    "source_backend": self.image_backend,
+                    **({"fallback_reason": fallback_note} if fallback_note else {}),
                 },
             ))
 
@@ -673,7 +735,11 @@ class ImageGenerationAgent:
             images              = images,
             ab_test_ready       = len(images) > 1,
             generation_time_sec = round(time.time() - start, 2),
-            knowledge_context   = context,
+            knowledge_context   = (
+                context
+                if not fallback_notes
+                else f"{context}\nFallback: {' '.join(fallback_notes)}"
+            ),
         )
 
         json_path = OUTPUT_DIR / ("result_" + result.request_id + ".json")

@@ -1,0 +1,26 @@
+{
+  "request_id": "61bafe38",
+  "brand_name": "Gannah's Makeup",
+  "campaign_goal": "Campaign visual for Eid el adha. Context: creating different shades of lipgloss colors for eid",
+  "images": [
+    {
+      "image_id": "61bafe38-v1",
+      "request_id": "61bafe38",
+      "local_path": "uploads\\images\\61bafe38-v1.png",
+      "prompt_used": "\"Gannah's Makeup Eid el Adha campaign: modern, professional, clean style, #2563EB and #7C3AED dominant, natural lighting, single focal point, vibrant lipgloss shades, high contrast, Instagram-friendly composition, GenZ appeal.\"",
+      "ad_copy": "Elevate Your Eid Look with Gannah's",
+      "platform": "instagram",
+      "size": "512x512",
+      "model_used": "local-fallback",
+      "logo_applied": true,
+      "metadata": {
+        "brand": "Gannah's Makeup",
+        "campaign_goal": "Campaign visual for Eid el adha. Context: creating different shades of lipgloss colors for eid",
+        "variation": 0
+      }
+    }
+  ],
+  "ab_test_ready": false,
+  "generation_time_sec": 0.85,
+  "knowledge_context": "Platform rules: Instagram ads: use bright vibrant colors, high contrast. Keep composition clean with single focal point. Lifestyle imagery with natural lighting works best.\nIndustry tips: Clean composition, brand colors dominant, single focal point, professional lighting."
+}

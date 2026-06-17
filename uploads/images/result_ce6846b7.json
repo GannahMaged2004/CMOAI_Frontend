@@ -1,0 +1,26 @@
+{
+  "request_id": "ce6846b7",
+  "brand_name": "BookStore",
+  "campaign_goal": "Campaign visual for spring launch. Context: 50% off",
+  "images": [
+    {
+      "image_id": "ce6846b7-v1",
+      "request_id": "ce6846b7",
+      "local_path": "uploads\\images\\ce6846b7-v1.png",
+      "prompt_used": "\"Generate a modern, professional image for BookStore's spring launch on Instagram, featuring a singular stack of books in natural light, with #2563EB and #7C3AED dominant, and a bright 50% off tag, clean composition, high contrast, and a single focal point.\"",
+      "ad_copy": "Spring into Savings: 50% Off",
+      "platform": "instagram",
+      "size": "512x512",
+      "model_used": "local-fallback",
+      "logo_applied": true,
+      "metadata": {
+        "brand": "BookStore",
+        "campaign_goal": "Campaign visual for spring launch. Context: 50% off",
+        "variation": 0
+      }
+    }
+  ],
+  "ab_test_ready": false,
+  "generation_time_sec": 1.38,
+  "knowledge_context": "Platform rules: Instagram ads: use bright vibrant colors, high contrast. Keep composition clean with single focal point. Lifestyle imagery with natural lighting works best.\nIndustry tips: Clean composition, brand colors dominant, single focal point, professional lighting."
+}

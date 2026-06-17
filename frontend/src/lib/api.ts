@@ -1,6 +1,7 @@
 import { getAccessToken, getRefreshToken, saveTokens, clearTokens } from './auth';
+import { API_BASE_URL } from './env';
 
-export const BASE_URL = '/api/v1';
+export const BASE_URL = API_BASE_URL;
 
 export function getAuthHeaders(): HeadersInit {
   const token = getAccessToken();

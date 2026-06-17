@@ -12,6 +12,18 @@ import {
   TableRow,
 } from "../../../components/ui/table";
 import type { BrandOut, CampaignOut } from "../../../types/api";
+import { updateCampaign } from "../../../services/campaignService";
+import {
+  createStrategy,
+  updateStrategy,
+} from "../../../services/strategyService";
+import { recordMetric } from "../../../services/analyticsService";
+import {
+  createContentItem,
+  createSchedule,
+  deleteSchedule,
+  listSchedules,
+} from "../../../services/contentCalendarService";
 import { PANEL_CLASS, SUBPANEL_CLASS } from "../constants";
 import { BriefStat } from "../components/CampaignBrief";
 
@@ -59,6 +71,10 @@ const GOAL_OPTIONS = [
   "Grow Awareness",
   "Build Community",
 ];
+
+const PLATFORM_FALLBACKS: Record<string, string> = {
+  Facebook: "Instagram",
+};
 
 const isTravelBrand = (industry: string, productService: string) =>
   /travel|trip|tour|vacation|destination|hotel|hospitality/i.test(
@@ -234,14 +250,203 @@ function buildGeneratedPlan(form: PlannerFormState): GeneratedPlan {
   };
 }
 
+function buildStrategyPayload(
+  campaign: CampaignOut,
+  form: PlannerFormState,
+  plan: GeneratedPlan,
+) {
+  const objectiveParts = [
+    `Main goal: ${form.mainGoal}`,
+    `Target audience: ${form.targetAudience || "Not specified"}`,
+    `Budget: $${form.budget.toLocaleString("en-US")}`,
+    `Product / service: ${form.productService || "Not specified"}`,
+    `Next steps: ${plan.nextSteps.join(" | ")}`,
+  ];
+
+  const themeParts = plan.contentPillars.map(
+    (pillar) =>
+      `${pillar.pillar}: ${pillar.message} (${pillar.format}; ${pillar.frequency})`,
+  );
+
+  return {
+    title: `${campaign.name} Marketing Strategy`,
+    objectives: objectiveParts.join("\n"),
+    messaging_themes: themeParts.join("\n"),
+    platform_focus: form.platforms.join(", "),
+    brand_id: campaign.brand_id,
+  };
+}
+
+function formatLocalDate(date: Date): string {
+  const year = date.getFullYear();
+  const month = `${date.getMonth() + 1}`.padStart(2, "0");
+  const day = `${date.getDate()}`.padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function addDays(date: Date, days: number): Date {
+  const next = new Date(date);
+  next.setDate(next.getDate() + days);
+  return next;
+}
+
+function startOfDay(date: Date): Date {
+  const next = new Date(date);
+  next.setHours(0, 0, 0, 0);
+  return next;
+}
+
+function getPlanningStartDate(campaign: CampaignOut): Date {
+  const today = startOfDay(new Date());
+  if (!campaign.start_date) return today;
+
+  const campaignStart = startOfDay(new Date(campaign.start_date));
+  if (Number.isNaN(campaignStart.getTime())) return today;
+  return campaignStart > today ? campaignStart : today;
+}
+
+function normalizePlatform(platform: string): string {
+  return PLATFORM_FALLBACKS[platform] ?? platform;
+}
+
+function inferContentType(text: string): string {
+  const lower = text.toLowerCase();
+  if (lower.includes("email")) return "email";
+  if (
+    lower.includes("reel") ||
+    lower.includes("video") ||
+    lower.includes("live") ||
+    lower.includes("story") ||
+    lower.includes("clip")
+  ) {
+    return "video";
+  }
+  if (
+    lower.includes("offer") ||
+    lower.includes("promo") ||
+    lower.includes("sale") ||
+    lower.includes("announcement")
+  ) {
+    return "ad";
+  }
+  return "post";
+}
+
+function extractScheduledTime(text: string, fallbackHour: number): string {
+  const match = text.match(/(\d{1,2})(?::(\d{2}))?\s*(AM|PM)/i);
+  if (!match) return `${`${fallbackHour}`.padStart(2, "0")}:00`;
+
+  let hour = Number.parseInt(match[1], 10);
+  const minute = match[2] ?? "00";
+  const meridiem = match[3].toUpperCase();
+
+  if (meridiem === "AM" && hour === 12) hour = 0;
+  if (meridiem === "PM" && hour !== 12) hour += 12;
+
+  return `${`${hour}`.padStart(2, "0")}:${minute}`;
+}
+
+function compactTitle(text: string): string {
+  return text
+    .replace(/\(.*?\)/g, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 90);
+}
+
+function buildCalendarDrafts(
+  campaign: CampaignOut,
+  form: PlannerFormState,
+  plan: GeneratedPlan,
+) {
+  const startDate = getPlanningStartDate(campaign);
+  const endDate = addDays(startDate, 13);
+  const primaryPlatform = normalizePlatform(form.platforms[0] ?? "Instagram");
+  const secondaryPlatform = normalizePlatform(
+    form.platforms[1] ?? form.platforms[0] ?? "TikTok",
+  );
+  const primaryPillars = plan.contentPillars;
+
+  const entries = Array.from({ length: 14 }, (_, offset) => {
+    const dayDate = addDays(startDate, offset);
+    const weekdayName = dayDate.toLocaleDateString("en-US", {
+      weekday: "long",
+    });
+    const row =
+      plan.postingSchedule.find((item) => item.day === weekdayName) ??
+      plan.postingSchedule[offset % plan.postingSchedule.length];
+    const pillar = primaryPillars[offset % primaryPillars.length];
+    const scheduledDate = formatLocalDate(dayDate);
+    const drafts = [];
+
+    if (!row.primary.toLowerCase().includes("rest")) {
+      drafts.push({
+        title: `${compactTitle(row.primary)} for ${campaign.name}`,
+        content_type: inferContentType(row.primary),
+        platform: primaryPlatform,
+        objective: form.mainGoal,
+        body_text: `${row.primary}. Pillar: ${pillar.pillar}. Core message: ${pillar.message}`,
+        scheduled_date: scheduledDate,
+        scheduled_time: extractScheduledTime(row.primary, 9),
+        status: offset < 3 ? "Published" : "Ready",
+      });
+    }
+
+    if (!row.secondary.toLowerCase().includes("rest")) {
+      drafts.push({
+        title: `${compactTitle(row.secondary)} for ${campaign.name}`,
+        content_type: inferContentType(row.secondary),
+        platform: secondaryPlatform,
+        objective: form.mainGoal,
+        body_text: `${row.secondary}. Support angle: ${pillar.message}`,
+        scheduled_date: scheduledDate,
+        scheduled_time: extractScheduledTime(row.secondary, 13),
+        status: offset < 3 ? "Published" : "Draft",
+      });
+    }
+
+    return drafts;
+  }).flat();
+
+  return {
+    startDate: formatLocalDate(startDate),
+    endDate: formatLocalDate(endDate),
+    entries,
+  };
+}
+
+function buildMetricPayload(contentId: number, index: number, platform: string) {
+  const platformBoost =
+    platform === "TikTok" ? 220 : platform === "LinkedIn" ? 140 : 180;
+  const impressions = 1800 + index * 260 + platformBoost;
+  const reach = 1200 + index * 180 + platformBoost;
+  const engagement = Math.round(reach * (0.045 + (index % 3) * 0.01));
+  const clicks = Math.max(12, Math.round(impressions * 0.024));
+  const conversions = Math.max(2, Math.round(clicks * 0.16));
+
+  return {
+    content_id: contentId,
+    impressions,
+    engagement,
+    clicks,
+    conversions,
+    reach,
+    cpc: Number((0.55 + index * 0.07).toFixed(2)),
+    ctr: Number(((clicks / impressions) * 100).toFixed(2)),
+    roas: Number((1.9 + index * 0.22).toFixed(2)),
+  };
+}
+
 export function MarketPlannerPanel({
   campaign,
   brand,
   brandAudience,
+  onStrategyLinked,
 }: {
   campaign: CampaignOut;
   brand: BrandOut | null;
   brandAudience: string | null;
+  onStrategyLinked?: (campaign: CampaignOut) => void;
 }) {
   const initialForm = useMemo<PlannerFormState>(
     () => ({
@@ -261,11 +466,20 @@ export function MarketPlannerPanel({
   const [generatedPlan, setGeneratedPlan] = useState<GeneratedPlan | null>(
     () => buildGeneratedPlan(initialForm),
   );
+  const [isSavingStrategy, setIsSavingStrategy] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [saveSuccess, setSaveSuccess] = useState<string | null>(null);
+  const [linkedStrategyId, setLinkedStrategyId] = useState<number | null>(
+    campaign.strategy_id,
+  );
 
   useEffect(() => {
     setForm(initialForm);
     setGeneratedPlan(buildGeneratedPlan(initialForm));
-  }, [initialForm]);
+    setSaveError(null);
+    setSaveSuccess(null);
+    setLinkedStrategyId(campaign.strategy_id);
+  }, [campaign.strategy_id, initialForm]);
 
   const togglePlatform = (platform: string) => {
     setForm((current) => {
@@ -283,6 +497,67 @@ export function MarketPlannerPanel({
 
   const primaryPlatform = form.platforms[0] ?? "Instagram";
   const secondaryPlatform = form.platforms[1] ?? form.platforms[0] ?? "TikTok";
+
+  const handleGenerateStrategy = async () => {
+    const nextPlan = buildGeneratedPlan(form);
+    setGeneratedPlan(nextPlan);
+    setIsSavingStrategy(true);
+    setSaveError(null);
+    setSaveSuccess(null);
+
+    try {
+      const payload = buildStrategyPayload(campaign, form, nextPlan);
+      const strategy = linkedStrategyId
+        ? await updateStrategy(linkedStrategyId, payload)
+        : await createStrategy(payload);
+
+      const updatedCampaign = await updateCampaign(campaign.id, {
+        strategy_id: strategy.id,
+      });
+
+      const existingSchedules = await listSchedules(strategy.id);
+      await Promise.all(existingSchedules.map((schedule) => deleteSchedule(schedule.id)));
+
+      const calendarDraft = buildCalendarDrafts(campaign, form, nextPlan);
+      const schedule = await createSchedule({
+        plan_type: "weekly",
+        start_date: calendarDraft.startDate,
+        end_date: calendarDraft.endDate,
+        strategy_id: strategy.id,
+      });
+
+      const createdItems = await Promise.all(
+        calendarDraft.entries.map((entry) =>
+          createContentItem({
+            ...entry,
+            schedule_id: schedule.id,
+          }),
+        ),
+      );
+
+      await Promise.all(
+        createdItems
+          .slice(0, Math.min(6, createdItems.length))
+          .map((item, index) =>
+            recordMetric(buildMetricPayload(item.id, index, item.platform)),
+          ),
+      );
+
+      setLinkedStrategyId(strategy.id);
+      onStrategyLinked?.(updatedCampaign);
+      setSaveSuccess(
+        "Strategy saved, 14-day calendar generated, and starter performance data seeded.",
+      );
+    } catch (error) {
+      setSaveError(
+        error instanceof Error
+          ? error.message
+          : "Unable to save the strategy right now.",
+      );
+    } finally {
+      setIsSavingStrategy(false);
+    }
+  };
 
   return (
     <div className="space-y-5">
@@ -450,15 +725,26 @@ export function MarketPlannerPanel({
             <Button
               type="button"
               className="bg-neonBlue text-cosmic hover:bg-neonBlue/90"
-              onClick={() => setGeneratedPlan(buildGeneratedPlan(form))}
+              onClick={() => void handleGenerateStrategy()}
+              disabled={isSavingStrategy}
             >
-              Generate Marketing Strategy
+              {isSavingStrategy
+                ? "Saving Strategy..."
+                : "Generate Marketing Strategy"}
             </Button>
-            {generatedPlan ? (
+            {saveSuccess ? (
+              <span className="inline-flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-xs font-medium text-emerald-200">
+                <CheckCircle2 className="size-4" />
+                {saveSuccess}
+              </span>
+            ) : generatedPlan ? (
               <span className="inline-flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-xs font-medium text-emerald-200">
                 <CheckCircle2 className="size-4" />
                 Marketing strategy generated
               </span>
+            ) : null}
+            {saveError ? (
+              <span className="text-sm text-rose-200">{saveError}</span>
             ) : null}
           </div>
         </div>

@@ -1,0 +1,28 @@
+{
+  "request_id": "cb53916d",
+  "brand_name": "BookStore",
+  "campaign_goal": "Campaign visual for Book Summer. Context: It's a book sale 80% off",
+  "images": [
+    {
+      "image_id": "cb53916d-v1",
+      "request_id": "cb53916d",
+      "local_path": "uploads\\images\\cb53916d-v1.png",
+      "prompt_used": "\"A happy child reading a book outdoors on a sunny day, with #2563EB and #7C3AED dominant, modern and clean style, professional natural lighting, high contrast, single focal point on the book with '80% off' text, conveying a joyful and inviting mood.\"",
+      "ad_copy": "Summer Reads 80% Off",
+      "platform": "instagram",
+      "size": "512x512",
+      "model_used": "local-fallback",
+      "logo_applied": true,
+      "metadata": {
+        "brand": "BookStore",
+        "campaign_goal": "Campaign visual for Book Summer. Context: It's a book sale 80% off",
+        "variation": 0,
+        "source_backend": "runway",
+        "fallback_reason": "Runway could not generate this image because credits or billing were unavailable. A local preview was created instead. (Runway image request failed (400): {\"error\":\"You do not have enough credits to run this task.\",\"docUrl\":\"https://docs.dev.runwayml.com/api\"})"
+      }
+    }
+  ],
+  "ab_test_ready": false,
+  "generation_time_sec": 1.96,
+  "knowledge_context": "Platform rules: Instagram ads: use bright vibrant colors, high contrast. Keep composition clean with single focal point. Lifestyle imagery with natural lighting works best.\nIndustry tips: Clean composition, brand colors dominant, single focal point, professional lighting.\nFallback: Runway could not generate this image because credits or billing were unavailable. A local preview was created instead. (Runway image request failed (400): {\"error\":\"You do not have enough credits to run this task.\",\"docUrl\":\"https://docs.dev.runwayml.com/api\"})"
+}

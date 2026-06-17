@@ -1,0 +1,31 @@
+{
+  "base_url": "http://127.0.0.1:5173",
+  "count": 25,
+  "files": [
+    "01-welcome.png",
+    "02-landing.png",
+    "03-pricing.png",
+    "04-payment-no-plan.png",
+    "05-payment-free.png",
+    "06-payment-pro.png",
+    "07-login.png",
+    "08-register.png",
+    "09-forgot-password.png",
+    "10-verify-otp.png",
+    "11-reset-password.png",
+    "12-feature-brand-coaching.png",
+    "13-feature-market-planning.png",
+    "14-feature-smart-calendar.png",
+    "15-feature-content-generation.png",
+    "16-feature-analytics.png",
+    "17-feature-campaign-management.png",
+    "18-dashboard-orchestrator.png",
+    "19-dashboard-market-planner.png",
+    "20-dashboard-brand-coaching.png",
+    "21-dashboard-market-calendar.png",
+    "22-dashboard-text-generation.png",
+    "23-dashboard-image-generation.png",
+    "24-dashboard-video-generation.png",
+    "25-dashboard-performance-analytics.png"
+  ]
+}

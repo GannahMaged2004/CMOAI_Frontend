@@ -2,6 +2,8 @@ import { request } from "../lib/api";
 import type {
   AnalyticsOverview,
   ChannelBreakdown,
+  MetricCreatePayload,
+  MetricOut,
   TimeSeriesPoint,
 } from "../types/api";
 
@@ -29,4 +31,13 @@ export async function getAnalyticsChart(params: {
     end_date: params.end_date,
   });
   return request<TimeSeriesPoint[]>(`/analytics/chart?${qs}`);
+}
+
+export async function recordMetric(
+  payload: MetricCreatePayload,
+): Promise<MetricOut> {
+  return request<MetricOut>("/analytics/metrics", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
 }

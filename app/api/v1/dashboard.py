@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import List
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import get_async_db, get_current_user_async
@@ -37,10 +37,15 @@ async def dashboard_recent_activity(
 
 @router.get("/upcoming", response_model=List[UpcomingContentItem])
 async def dashboard_upcoming(
+    campaign_id: int | None = Query(None),
     current_user: User = Depends(get_current_user_async),
     db: AsyncSession = Depends(get_async_db),
 ):
-    return await service.get_upcoming_content(current_user.id, db)
+    return await service.get_upcoming_content(
+        current_user.id,
+        db,
+        campaign_id=campaign_id,
+    )
 
 
 @router.get("/insights", response_model=List[AIInsight])

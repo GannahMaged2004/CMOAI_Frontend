@@ -137,7 +137,11 @@ async def get_recent_activity(user_id: int, db: AsyncSession) -> List[RecentActi
     ]
 
 
-async def get_upcoming_content(user_id: int, db: AsyncSession) -> List[UpcomingContentItem]:
+async def get_upcoming_content(
+    user_id: int,
+    db: AsyncSession,
+    campaign_id: int | None = None,
+) -> List[UpcomingContentItem]:
     today = date.today()
     stmt = (
         select(ContentItem)
@@ -151,6 +155,11 @@ async def get_upcoming_content(user_id: int, db: AsyncSession) -> List[UpcomingC
         .order_by(ContentItem.scheduled_date.asc())
         .limit(5)
     )
+    if campaign_id is not None:
+        stmt = (
+            stmt.join(Campaign, Campaign.strategy_id == MarketingStrategy.id)
+            .where(Campaign.id == campaign_id)
+        )
     result = await db.execute(stmt)
     items = result.scalars().all()
     return [

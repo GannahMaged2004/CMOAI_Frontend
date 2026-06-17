@@ -146,6 +146,59 @@ export interface ContentItemOut {
   created_at: string;
 }
 
+export interface ScheduleOut {
+  id: number;
+  plan_type: string;
+  start_date: string;
+  end_date: string;
+  strategy_id: number;
+  created_at: string;
+}
+
+export interface ScheduleCreatePayload {
+  plan_type?: string;
+  start_date: string;
+  end_date: string;
+  strategy_id: number;
+}
+
+export interface ContentItemCreatePayload {
+  title: string;
+  content_type: string;
+  platform: string;
+  objective?: string | null;
+  body_text?: string | null;
+  scheduled_date: string;
+  scheduled_time?: string | null;
+  status?: string;
+  schedule_id: number;
+}
+
+export interface MetricCreatePayload {
+  content_id: number;
+  impressions?: number;
+  engagement?: number;
+  clicks?: number;
+  conversions?: number;
+  reach?: number;
+  cpc?: number | null;
+  ctr?: number | null;
+  roas?: number | null;
+}
+
+export interface MetricOut {
+  id: number;
+  content_id: number;
+  impressions: number;
+  engagement: number;
+  clicks: number;
+  conversions: number;
+  reach: number;
+  cpc?: string | null;
+  ctr?: string | null;
+  roas?: string | null;
+}
+
 export interface QuickActionResponse {
   result: string;
 }
@@ -205,6 +258,27 @@ export interface TextAgentResponse {
 }
 
 export interface ContentAgentStatus {
+  provider: string;
+  model: string;
+  mode: "live" | "fallback";
+  configured: boolean;
+}
+
+export interface BrandAgentRequest {
+  brand_id: number;
+  action: string;
+  campaign_id?: number | null;
+}
+
+export interface BrandAgentResponse {
+  brand_id: number;
+  campaign_id: number | null;
+  action: string;
+  output: string;
+  mode: "live" | "fallback";
+}
+
+export interface BrandAgentStatus {
   provider: string;
   model: string;
   mode: "live" | "fallback";

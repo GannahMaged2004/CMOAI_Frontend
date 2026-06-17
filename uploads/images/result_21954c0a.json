@@ -1,0 +1,26 @@
+{
+  "request_id": "21954c0a",
+  "brand_name": "Gannah's Book Haul",
+  "campaign_goal": "Campaign visual for Summer Sale. Context: Book sale 50% off",
+  "images": [
+    {
+      "image_id": "21954c0a-v1",
+      "request_id": "21954c0a",
+      "local_path": "uploads\\images\\21954c0a-v1.png",
+      "prompt_used": "\"A joyful child reading outdoors on a sunny day, surrounded by stacked books, with 50% off sale tag, lit by soft natural light, #2563EB and #7C3AED dominant, modern and clean style, high contrast, single focal point, capturing a happy summer mood for Gannah's Book Haul Instagram ad.\"",
+      "ad_copy": "50% Off: Read More, Save More",
+      "platform": "instagram",
+      "size": "512x512",
+      "model_used": "runway-gen4_image",
+      "logo_applied": true,
+      "metadata": {
+        "brand": "Gannah's Book Haul",
+        "campaign_goal": "Campaign visual for Summer Sale. Context: Book sale 50% off",
+        "variation": 0
+      }
+    }
+  ],
+  "ab_test_ready": false,
+  "generation_time_sec": 29.43,
+  "knowledge_context": "Platform rules: Instagram ads: use bright vibrant colors, high contrast. Keep composition clean with single focal point. Lifestyle imagery with natural lighting works best.\nIndustry tips: Clean composition, brand colors dominant, single focal point, professional lighting."
+}

@@ -1,0 +1,42 @@
+{
+  "request_id": "7e893c35",
+  "brand_name": "BookStore",
+  "campaign_goal": "A/B test ad creatives for Book Summer. Context: It's a book sale 80% off",
+  "images": [
+    {
+      "image_id": "7e893c35-v1",
+      "request_id": "7e893c35",
+      "local_path": "uploads\\images\\7e893c35-v1.png",
+      "prompt_used": "\"Generate a modern, professional image for BookStore's 80% off summer sale: a brightly lit, vibrant #2563EB and #7C3AED bookshelf with a single, prominent book as the focal point, using natural lighting and clean composition.\"",
+      "ad_copy": "80% Off: Summer's Biggest Book Sale",
+      "platform": "instagram",
+      "size": "512x512",
+      "model_used": "runway-gen4_image",
+      "logo_applied": true,
+      "metadata": {
+        "brand": "BookStore",
+        "campaign_goal": "A/B test ad creatives for Book Summer. Context: It's a book sale 80% off",
+        "variation": 0
+      }
+    },
+    {
+      "image_id": "7e893c35-v2",
+      "request_id": "7e893c35",
+      "local_path": "uploads\\images\\7e893c35-v2.png",
+      "prompt_used": "\"Generate a modern, professional Instagram ad for BookStore's 80% off summer sale, featuring a single book as the focal point, with warm golden lighting, #2563EB and #7C3AED dominant, and a clean composition, evoking a joyful mood, on a bright, minimalist background.\"",
+      "ad_copy": "80% Off: Summer's Biggest Book Sale",
+      "platform": "instagram",
+      "size": "512x512",
+      "model_used": "runway-gen4_image",
+      "logo_applied": true,
+      "metadata": {
+        "brand": "BookStore",
+        "campaign_goal": "A/B test ad creatives for Book Summer. Context: It's a book sale 80% off",
+        "variation": 1
+      }
+    }
+  ],
+  "ab_test_ready": true,
+  "generation_time_sec": 66.24,
+  "knowledge_context": "Platform rules: Instagram ads: use bright vibrant colors, high contrast. Keep composition clean with single focal point. Lifestyle imagery with natural lighting works best.\nIndustry tips: Clean composition, brand colors dominant, single focal point, professional lighting."
+}

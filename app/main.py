@@ -6,6 +6,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from app.api.v1.router import api_router
+from app.core.config import settings
+from app.db.bootstrap import ensure_demo_user
+from app.db.session import SessionLocal
 
 app = FastAPI(
     title="CMO.ai API",
@@ -16,7 +19,7 @@ app = FastAPI(
 # ── CORS ──────────────────────────────────────────────────────
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:3000"],
+    allow_origins=settings.cors_origins_list,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -45,3 +48,12 @@ ahmedsaber@test.com
 @app.get("/health", tags=["Health"])
 def health_check():
     return {"status": "ok"}
+
+
+@app.on_event("startup")
+def seed_demo_user() -> None:
+    db = SessionLocal()
+    try:
+        ensure_demo_user(db)
+    finally:
+        db.close()

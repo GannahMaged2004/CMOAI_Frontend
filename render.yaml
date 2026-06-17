@@ -1,0 +1,40 @@
+services:
+  - type: web
+    name: cmo-ai-api
+    runtime: python
+    rootDir: .
+    buildCommand: pip install -r requirements.txt
+    preDeployCommand: alembic upgrade head
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: SECRET_KEY
+        sync: false
+      - key: CORS_ORIGINS
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
+      - key: GROQ_MODEL
+        value: llama-3.3-70b-versatile
+      - key: RUNWAY_API_KEY
+        sync: false
+      - key: RUNWAY_MODEL
+        value: gen4.5
+      - key: RUNWAY_RATIO
+        value: 1280:720
+      - key: RUNWAY_DURATION
+        value: "5"
+      - key: RUNWAY_IMAGE_MODEL
+        value: gen4_image
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        value: "587"
+      - key: SMTP_USERNAME
+        sync: false
+      - key: SMTP_PASSWORD
+        sync: false
+      - key: EMAILS_FROM_EMAIL
+        sync: false
