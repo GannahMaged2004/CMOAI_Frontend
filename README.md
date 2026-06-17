@@ -2,6 +2,10 @@
 
 CMO.ai is an AI-powered marketing workspace that helps teams move from campaign ideas to structured planning, creative production, and execution.
 
+## Demo video
+
+[Watch the CMO.ai demo video](<demo-assets/CMO.AI video.mp4>)
+
 ## What is included
 
 - Frontend dashboard built with React, TypeScript, Vite, and Tailwind CSS
@@ -87,3 +91,9 @@ The repository now includes:
 - Backend CORS origins are now configured through `CORS_ORIGINS`.
 - Generated image uploads currently use local disk storage in `uploads/`, which is acceptable for demo use but should be moved to persistent cloud storage for long-term production use.
 - Image and video agents include fallback behavior when external providers are not configured.
+
+## Team
+
+- Frontend was done by Gannah Maged Eltonsy
+- Backend was done by Saber Ahmed
+- AI Team: Abdelrahman Yosri, Esraa Reda, Habiba Helal, Shahd Mohamed, and Sara Wael
