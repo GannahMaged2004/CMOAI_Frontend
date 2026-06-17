@@ -92,8 +92,13 @@ The repository now includes:
 - Generated image uploads currently use local disk storage in `uploads/`, which is acceptable for demo use but should be moved to persistent cloud storage for long-term production use.
 - Image and video agents include fallback behavior when external providers are not configured.
 
+## Supervised By
+
+- Dr Yasser Fouad
+
 ## Team
 
 - Frontend was done by Gannah Maged Eltonsy (Me)
 - Backend was done by Ahmed Saber https://github.com/ahmedsaberabdelgalil/
 - AI Team: Abdelrahman Yosri, Esraa Reda, Habiba Helal, Shahd Mohamed, and Sara Wael
+
