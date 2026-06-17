@@ -94,6 +94,6 @@ The repository now includes:
 
 ## Team
 
-- Frontend was done by Gannah Maged Eltonsy
+- Frontend was done by Gannah Maged Eltonsy (Me)
 - Backend was done by Ahmed Saber https://github.com/ahmedsaberabdelgalil/
 - AI Team: Abdelrahman Yosri, Esraa Reda, Habiba Helal, Shahd Mohamed, and Sara Wael
